@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>World Cup 2026 — Draft League</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --ui:'Archivo',system-ui,sans-serif;
+  --accent:#2bd47d;
+  --bg:#080b11; --panel:#10151e; --panel-2:#161d28; --chip:#1e2734;
+  --hairline:rgba(255,255,255,.08); --hairline-2:rgba(255,255,255,.14);
+  --text:#eef2f7; --muted:#8b97a8; --on-accent:#06130c;
+  --shadow:0 18px 50px -20px rgba(0,0,0,.7);
+}
+*{box-sizing:border-box;}
+html,body{margin:0;height:100%;}
+body{font-family:var(--ui);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;
+  min-height:100%;display:flex;align-items:center;justify-content:center;padding:40px 24px;}
+a{text-decoration:none;color:inherit;}
+::selection{background:var(--accent);color:var(--on-accent);}
+.shell{width:100%;max-width:880px;}
+.head{text-align:center;margin-bottom:40px;}
+.kick{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:14px;}
+.title{font-size:64px;font-weight:900;letter-spacing:-.03em;line-height:.95;margin:0;display:flex;
+  flex-direction:column;align-items:center;gap:4px;}
+.title .globe{font-size:52px;}
+.title span{color:var(--accent);}
+.sub{color:var(--muted);font-size:17px;line-height:1.5;margin:18px auto 0;max-width:520px;text-wrap:pretty;}
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+@media(max-width:640px){.cards{grid-template-columns:1fr;}}
+.card{background:var(--panel);border:1px solid var(--hairline);border-radius:18px;padding:28px;
+  display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow);transition:.18s;border-top:3px solid var(--clk);}
+.card:hover{transform:translateY(-3px);border-color:var(--hairline-2);}
+.card.draft{--clk:var(--accent);}
+.card.standings{--clk:#37a0ff;}
+.card-ico{font-size:34px;line-height:1;}
+.card h2{margin:0;font-size:26px;font-weight:900;letter-spacing:-.02em;}
+.card p{margin:0;color:var(--muted);font-size:15px;line-height:1.5;flex:1;text-wrap:pretty;}
+.card-go{display:inline-flex;align-items:center;gap:8px;font-weight:700;font-size:15px;color:var(--clk);margin-top:4px;}
+.foot{text-align:center;margin-top:34px;font-family:var(--mono);font-size:12px;color:var(--muted);line-height:1.7;}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="head">
+    <div class="kick">FIFA World Cup 2026 · Draft League</div>
+    <h1 class="title"><span class="globe">🌍</span>World Cup <span>Draft</span></h1>
+    <p class="sub">Six to eight managers, a snake draft of all 48 nations, and a live competition table scored on how your teams perform. Pick your room below.</p>
+  </div>
+  <div class="cards">
+    <a class="card draft" href="draft.html">
+      <span class="card-ico">🎯</span>
+      <h2>Run the draft</h2>
+      <p>Set your room, spin for the snake order, and draft all 48 teams with live order tracking, tier reveals, and squad summaries.</p>
+      <span class="card-go">Open draft →</span>
+    </a>
+    <a class="card standings" href="standings.html">
+      <span class="card-ico">🏆</span>
+      <h2>Competition results</h2>
+      <p>The live league table — managers ranked by their drafted teams' tournament results, with per-match scoring and group breakdowns.</p>
+      <span class="card-go">Open standings →</span>
+    </a>
+  </div>
+  <div class="foot">
+    Static site · no account needed · works in any modern browser
+  </div>
+</div>
+</body>
+</html>

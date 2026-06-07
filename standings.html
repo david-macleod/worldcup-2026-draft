@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>World Cup 2026 — Competition Results</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+  --ui:'Archivo',system-ui,sans-serif;
+  --accent:#2bd47d; --gold:#f5c451;
+  --t1:#2bd47d; --t2:#f5953d; --t3:#ef5d6e;
+  --bg:#080b11; --panel:#10151e; --panel-2:#161d28; --chip:#1e2734;
+  --hairline:rgba(255,255,255,.08); --hairline-2:rgba(255,255,255,.14);
+  --text:#eef2f7; --muted:#8b97a8; --on-accent:#06130c;
+  --shadow:0 18px 50px -20px rgba(0,0,0,.7); --r:14px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;}
+body{font-family:var(--ui);background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+::selection{background:var(--accent);color:var(--on-accent);}
+.player-dot{display:none;}
+
+.wrap{max-width:1280px;margin:0 auto;padding:30px 26px 80px;}
+
+/* hero */
+.hero{display:flex;align-items:center;gap:18px;margin-bottom:30px;flex-wrap:wrap;}
+.hero-globe{font-size:38px;line-height:1;}
+.hero-txt{flex:1;min-width:240px;}
+.hero-kick{font-family:var(--mono);font-size:12px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:6px;}
+.hero-h1{font-size:42px;font-weight:900;letter-spacing:-.03em;line-height:1;margin:0;}
+.hero-sub{color:var(--muted);font-size:15px;margin-top:8px;}
+.hero-live{display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:12px;font-weight:700;
+  color:#ff6b6b;background:rgba(255,107,107,.12);padding:6px 12px;border-radius:20px;letter-spacing:.05em;}
+.hero-live::before{content:"";width:8px;height:8px;border-radius:50%;background:#ff6b6b;animation:blink 1.3s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.25;}}
+.reroll{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--muted);background:var(--chip);
+  padding:8px 13px;border-radius:9px;box-shadow:inset 0 0 0 1px var(--hairline);}
+.reroll:hover{color:var(--text);}
+
+.sec-head{display:flex;align-items:baseline;gap:12px;margin:38px 0 16px;}
+.sec-head h2{font-size:14px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;margin:0;}
+.sec-sub{font-family:var(--mono);font-size:12px;color:var(--muted);}
+
+/* leaderboard */
+.lb-grid{display:flex;flex-direction:column;gap:9px;}.lb-row{display:grid;grid-template-columns:22px 64px 50px 1fr;align-items:center;column-gap:12px;
+  background:var(--panel);border:1px solid var(--hairline);border-left:3px solid var(--clk);border-radius:12px;padding:8px 16px;}
+.lb-row.leader{box-shadow:0 0 0 1px var(--clk);}
+.lb-place{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--muted);text-align:left;}
+.lb-row.leader .lb-place{color:var(--gold);}
+.lb-name{font-weight:800;font-size:18px;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lb-pts{text-align:right;}
+.lb-pts b{display:block;font-family:var(--mono);font-size:24px;font-weight:700;line-height:1;}
+.lb-pts span{font-size:9px;letter-spacing:.1em;color:var(--muted);}
+/* legend */
+.lb-legend{display:flex;flex-wrap:wrap;gap:16px;margin:2px 0 16px;}
+.lb-legend .lg{font-family:var(--mono);font-size:11px;color:var(--muted);display:flex;align-items:center;gap:7px;}
+.lb-legend .lg::before{content:"";width:11px;height:11px;border-radius:3px;background:var(--c);}
+.lb-legend .t1{--c:var(--t1);} .lb-legend .t2{--c:var(--t2);} .lb-legend .t3{--c:var(--t3);}
+.lb-legend .held{--c:var(--chip);}
+.lb-legend .held::before{box-shadow:inset 0 0 0 1px var(--hairline-2);}
+/* full-width track: proportional bar (length = total) + holding cluster */
+.lb-track{display:flex;align-items:flex-end;gap:12px;min-height:46px;min-width:0;}
+.lb-bar{display:flex;align-items:flex-end;gap:2px;min-width:0;}
+.lb-seg{flex-basis:0;min-width:22px;display:flex;flex-direction:column;align-items:center;gap:5px;}
+.lb-seg-flag{flex:0 0 auto;}
+.lb-seg-block{width:100%;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.lb-seg.t1 .lb-seg-block{background:var(--t1);}
+.lb-seg.t2 .lb-seg-block{background:var(--t2);}
+.lb-seg.t3 .lb-seg-block{background:var(--t3);}
+.lb-seg-n{font-family:var(--mono);font-size:12px;font-weight:700;color:#0a0d12;}
+.lb-hold{display:flex;align-items:center;gap:5px;padding-left:10px;border-left:1px dashed var(--hairline-2);align-self:stretch;}
+.lb-hold-fl{display:inline-flex;opacity:.4;filter:grayscale(.6);}
+@media(max-width:760px){
+  .lb-row{grid-template-columns:20px 1fr 52px;row-gap:8px;}
+  .lb-track{grid-column:1 / -1;}
+}
+/* group-stage results feed */
+.gr-groups{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+@media(max-width:1080px){.gr-groups{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:720px){.gr-groups{grid-template-columns:1fr;}}
+.gr-grp{background:var(--panel);border:1px solid var(--hairline);border-radius:13px;padding:14px 15px;}
+.gr-h{font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.1em;color:var(--muted);margin-bottom:11px;}
+.gr-h b{color:var(--text);font-size:15px;}
+.gr-matches{display:flex;flex-direction:column;gap:8px;}
+.gr-match{display:flex;flex-direction:column;gap:5px;background:var(--panel-2);border:1px solid var(--hairline);
+  border-radius:10px;padding:8px;}
+.rr{display:flex;align-items:center;gap:10px;}
+.rr-box{display:flex;align-items:center;gap:7px;padding:4px 10px 4px 6px;border-radius:8px;
+  border:2px solid var(--c);background:var(--panel);min-width:60px;}
+.rr-box.t1{--c:var(--t1);} .rr-box.t2{--c:var(--t2);} .rr-box.t3{--c:var(--t3);}
+.rr-abbr{font-family:var(--mono);font-weight:700;font-size:13px;}
+.rr-score{margin-left:auto;font-family:var(--mono);font-weight:700;font-size:16px;}
+.rr.win .rr-score{color:var(--text);}
+.rr:not(.win){opacity:.92;}
+.rr-owner{flex:1;font-weight:700;font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.rr-stats{display:flex;align-items:center;gap:6px;flex:0 0 auto;}
+.rs{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:baseline;gap:1px;}
+.rs i{font-style:normal;font-size:8.5px;font-weight:700;color:var(--muted);}
+.rr-total{position:relative;font-family:var(--mono);font-size:14.5px;font-weight:700;color:#fff;background:#3b82f6;
+  border-radius:6px;padding:3px 9px;min-width:26px;text-align:center;margin-left:3px;cursor:default;}
+.rr-total.zero{background:var(--chip);color:var(--muted);}
+.rr-tip{position:absolute;bottom:calc(100% + 8px);right:0;z-index:30;display:none;flex-direction:column;gap:3px;
+  background:var(--panel);border:1px solid var(--hairline-2);border-radius:9px;padding:9px 11px;
+  box-shadow:0 14px 34px -10px rgba(0,0,0,.75);min-width:128px;}
+.rr-total:hover .rr-tip{display:flex;}
+.rr-tip>span{display:flex;justify-content:space-between;gap:16px;font-family:var(--ui);font-size:11.5px;
+  font-weight:600;color:var(--muted);white-space:nowrap;}
+.rr-tip>span b{font-family:var(--mono);font-weight:700;color:var(--text);}
+.rr-tip i{font-style:normal;}
+.rr-tip .tot{border-top:1px solid var(--hairline);padding-top:5px;margin-top:2px;}
+.rr-tip .tot i{color:var(--text);font-weight:700;}
+.rr-tip .tot b{color:#5aa0ff;}
+/* ── density (Rhythm tweak) ── */
+[data-density="compact"] .lb-grid{gap:7px;}
+[data-density="compact"] .lb-row{padding:8px 14px;row-gap:6px;}
+[data-density="compact"] .lb-track{min-height:40px;}
+[data-density="compact"] .lb-seg-block{height:18px;}
+[data-density="compact"] .lb-name{font-size:16px;}
+[data-density="compact"] .lb-pts b{font-size:21px;}
+[data-density="compact"] .gr-groups{gap:10px;}
+[data-density="compact"] .gr-grp{padding:11px 12px;}
+[data-density="compact"] .gr-matches{gap:6px;}
+[data-density="compact"] .gr-match{padding:6px;gap:4px;}
+[data-density="compact"] .rr{gap:8px;}
+[data-density="compact"] .rr-box{min-width:54px;padding:3px 8px 3px 5px;}
+[data-density="spacious"] .lb-grid{gap:13px;}
+[data-density="spacious"] .lb-row{padding:17px 22px;row-gap:14px;}
+[data-density="spacious"] .lb-track{min-height:54px;}
+[data-density="spacious"] .lb-seg-block{height:27px;}
+[data-density="spacious"] .lb-name{font-size:20px;}
+[data-density="spacious"] .lb-pts b{font-size:27px;}
+[data-density="spacious"] .gr-groups{gap:18px;}
+[data-density="spacious"] .gr-grp{padding:18px 18px;}
+[data-density="spacious"] .gr-matches{gap:11px;}
+[data-density="spacious"] .gr-match{padding:11px;gap:7px;}
+[data-density="spacious"] .rr{gap:12px;}
+[data-density="spacious"] .rr-box{min-width:68px;padding:5px 11px 5px 7px;}
+
+/* group tables */
+.groups{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+@media(max-width:1080px){.groups{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:560px){.groups{grid-template-columns:1fr;}}
+.grp{background:var(--panel);border:1px solid var(--hairline);border-radius:12px;padding:13px 14px 11px;}
+.grp-head{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:9px;}
+.grp-table{width:100%;border-collapse:collapse;font-size:12.5px;}
+.grp-table th{font-family:var(--mono);font-size:9.5px;font-weight:600;color:var(--muted);text-transform:uppercase;
+  padding:0 0 6px;text-align:center;letter-spacing:.04em;}
+.grp-table th.tl{text-align:left;padding-left:24px;}
+.grp-table td{padding:5px 0;text-align:center;border-top:1px solid var(--hairline);font-variant-numeric:tabular-nums;}
+.grp-table td.pos{color:var(--muted);font-family:var(--mono);font-size:11px;width:18px;}
+.grp-table td.tl{text-align:left;display:flex;align-items:center;gap:8px;}
+.gt-name{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.grp-table td.pts{font-weight:800;font-family:var(--mono);}
+.grp-table tr.q td.pos{color:var(--accent);}
+.grp-table tr.q .gt-name{color:var(--text);}
+.grp-table tr.q td{background:color-mix(in srgb,var(--accent) 7%,transparent);}
+.grp-table tr.q3 td{background:color-mix(in srgb,var(--gold) 7%,transparent);}
+.grp-table tr:not(.q) .gt-name{color:var(--muted);}
+.grp-matches{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px;margin-top:11px;padding-top:10px;border-top:1px solid var(--hairline);}
+.gm-row{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;}
+.gm-side{color:var(--muted);flex:1;}
+.gm-a{text-align:right;}
+.gm-b{text-align:left;}
+.gm-score{font-weight:700;color:var(--text);}
+
+/* qualification legend */
+.legend{display:flex;gap:18px;margin:14px 2px 0;font-family:var(--mono);font-size:11px;color:var(--muted);flex-wrap:wrap;}
+.legend span{display:inline-flex;align-items:center;gap:6px;}
+.legend i{width:11px;height:11px;border-radius:3px;display:inline-block;}
+.lg-q{background:color-mix(in srgb,var(--accent) 45%,transparent);}
+.lg-q3{background:color-mix(in srgb,var(--gold) 45%,transparent);}
+
+/* knockout */
+.ko-scroll{overflow-x:auto;padding-bottom:8px;}
+.ko-rounds{display:flex;gap:14px;min-width:max-content;}
+.ko-col{display:flex;flex-direction:column;gap:10px;justify-content:space-around;min-width:150px;}
+.ko-stage{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--muted);text-align:center;margin-bottom:2px;}
+.ko-tie{background:var(--panel);border:1px solid var(--hairline);border-radius:9px;overflow:hidden;}
+.ko-side{display:flex;align-items:center;gap:7px;padding:6px 9px;font-size:12px;}
+.ko-side+.ko-side{border-top:1px solid var(--hairline);}
+.ko-abbr{font-family:var(--mono);font-weight:700;flex:1;color:var(--muted);}
+.ko-side.win .ko-abbr{color:var(--text);}
+.ko-side.win{background:color-mix(in srgb,var(--accent) 9%,transparent);}
+.ko-score{font-family:var(--mono);font-weight:700;}
+.ko-score em{color:var(--muted);font-style:normal;font-size:10px;}
+.ko-champ-col{justify-content:flex-start;}
+.ko-champ{background:linear-gradient(180deg,color-mix(in srgb,var(--gold) 20%,var(--panel)),var(--panel));
+  border:1px solid color-mix(in srgb,var(--gold) 40%,transparent);border-radius:12px;padding:16px 14px;
+  display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:14px;}
+.ko-trophy{font-size:26px;}
+.ko-champ-name{font-weight:900;font-size:16px;text-align:center;letter-spacing:-.01em;}
+
+.foot{margin-top:40px;font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.6;
+  border-top:1px solid var(--hairline);padding-top:18px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="teams.js"></script>
+<script src="sim.js"></script>
+<script type="text/babel" src="shared.jsx"></script>
+<script type="text/babel" src="comp.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel">
+const { useState, useMemo, useEffect } = React;
+const teamsById = Object.fromEntries(window.WC_TEAMS.map(t => [t.id, t]));
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "theme": "Midnight",
+  "tiers": [
+    "#2bd47d",
+    "#f5953d",
+    "#ef5d6e"
+  ],
+  "density": "Cozy"
+}/*EDITMODE-END*/;
+
+const THEMES = {
+  Midnight: { '--bg':'#080b11','--panel':'#10151e','--panel-2':'#161d28','--chip':'#1e2734',
+    '--text':'#eef2f7','--muted':'#8b97a8','--hairline':'rgba(255,255,255,.08)','--hairline-2':'rgba(255,255,255,.14)' },
+  Stadium:  { '--bg':'#06140d','--panel':'#0c1f15','--panel-2':'#10271b','--chip':'#173626',
+    '--text':'#eafff3','--muted':'#83b29b','--hairline':'rgba(255,255,255,.09)','--hairline-2':'rgba(255,255,255,.17)' },
+  Broadcast:{ '--bg':'#e7ebf1','--panel':'#ffffff','--panel-2':'#f3f6fa','--chip':'#e9eef5',
+    '--text':'#0c1320','--muted':'#5b6878','--hairline':'rgba(15,23,42,.10)','--hairline-2':'rgba(15,23,42,.20)' },
+};
+const TIER_SETS = [
+  ['#2bd47d', '#f5953d', '#ef5d6e'], // Signal
+  ['#ffce4d', '#ff8a3d', '#ec4a78'], // Sunset
+  ['#43d9c4', '#4f9cf0', '#9b6cf0'], // Ocean
+  ['#46e0a6', '#2bb37f', '#1b7d5a'], // Mono
+];
+
+function Page(){
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [seed, setSeed] = useState(7);
+  const sim = useMemo(() => window.WC_SIM.simulate(seed), [seed]);
+  const { Leaderboard, GroupResults } = window.CompResults;
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const th = THEMES[t.theme] || THEMES.Midnight;
+    Object.entries(th).forEach(([k, v]) => root.style.setProperty(k, v));
+    const tiers = Array.isArray(t.tiers) ? t.tiers : TWEAK_DEFAULTS.tiers;
+    root.style.setProperty('--t1', tiers[0]);
+    root.style.setProperty('--t2', tiers[1]);
+    root.style.setProperty('--t3', tiers[2]);
+    root.setAttribute('data-density', String(t.density).toLowerCase());
+  }, [t.theme, t.tiers, t.density]);
+
+  return (
+    <div className="wrap">
+      <header className="hero">
+        <span className="hero-globe">🌍</span>
+        <div className="hero-txt">
+          <div className="hero-kick">FIFA World Cup 2026 · Draft League</div>
+          <h1 className="hero-h1">Competition Results</h1>
+          <div className="hero-sub">Live standings across all 48 nations — managers scored on their drafted teams.</div>
+        </div>
+        <span className="hero-live">LIVE</span>
+        <button className="reroll" onClick={() => setSeed(s => s + 1)}>↻ simulate again</button>
+      </header>
+
+      <Leaderboard leaderboard={sim.leaderboard} />
+
+      <GroupResults groupResults={sim.groupResults} leaderboard={sim.leaderboard} />
+
+      <div className="foot">
+        Prototype · tournament simulated (scores weighted by FIFA ranking) since the real World Cup hasn’t kicked off yet.<br/>
+        Manager rosters shown are an illustrative snake draft by rank — swap in your league’s real draft to go live.
+      </div>
+
+      <TweaksPanel title="Tweaks">
+        <TweakSection label="Mood" />
+        <TweakRadio label="Theme" value={t.theme} options={['Midnight', 'Stadium', 'Broadcast']}
+          onChange={(v) => setTweak('theme', v)} />
+        <TweakSection label="Tier palette" />
+        <TweakColor label="Tiers" value={t.tiers} options={TIER_SETS}
+          onChange={(v) => setTweak('tiers', v)} />
+        <TweakSection label="Rhythm" />
+        <TweakRadio label="Density" value={t.density} options={['Compact', 'Cozy', 'Spacious']}
+          onChange={(v) => setTweak('density', v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<Page />);
+</script>
+</body>
+</html>
