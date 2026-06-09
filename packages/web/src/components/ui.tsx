@@ -1,9 +1,9 @@
 import type { LeagueView, Team, LeaderboardEntry } from '../lib/api'
 
-export function Flag({ code, name, lg }: { code: string; name?: string; lg?: boolean }) {
+export function Flag({ code, name, lg, className }: { code: string; name?: string; lg?: boolean; className?: string }) {
   return (
     <img
-      className={lg ? 'flag lg' : 'flag'}
+      className={['flag', lg && 'lg', className].filter(Boolean).join(' ')}
       src={`https://flagcdn.com/${code}.svg`}
       alt={name || code}
       loading="lazy"

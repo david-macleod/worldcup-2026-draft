@@ -25,6 +25,9 @@ export async function apiFetch<T = unknown>(path: string, opts: RequestInit & { 
 export interface Team {
   id: string; name: string; abbr: string; code: string; rank: number
   conf: string; grp: string; star: string | null; host: number
+  // stat columns used by the draft-room "order by" sorter
+  pop: number | null; temp: number | null; rain: number | null; dogs: number | null
+  age: number | null; hgt: number | null; light: number | null; coffee: number | null; hue: number | null
 }
 export interface Match {
   id: string; stage: string; grp: string | null

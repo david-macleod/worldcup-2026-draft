@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link } from '@tanstack/react-router'
-import { apiFetch, type ManagerView, type Team } from '../lib/api'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { apiFetch, type ManagerView } from '../lib/api'
 import { Board, Leaderboard, Flag, teamMap } from '../components/ui'
+import { DraftRoom } from '../components/draftroom'
 
 export function Manager({ leagueId, token }: { leagueId: string; token: string }) {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const key = ['me', leagueId, token]
   const q = useQuery({
     queryKey: key,
@@ -16,8 +18,21 @@ export function Manager({ leagueId, token }: { leagueId: string; token: string }
   if (q.isLoading) return <div className="wrap"><p className="muted">Loading your draft room…</p></div>
   if (q.isError) return <div className="wrap"><p className="err">{(q.error as Error).message}</p></div>
   const v = q.data!
-
   const refresh = () => qc.invalidateQueries({ queryKey: key })
+
+  // Live sequential draft → the full-screen ported draft room.
+  if (v.league.mode === 'sequential' && v.league.status === 'drafting') {
+    return (
+      <DraftRoom
+        view={v}
+        onPick={async (teamId) => {
+          await apiFetch(`/leagues/${leagueId}/pick`, { method: 'POST', body: JSON.stringify({ token, team_id: teamId }) })
+          await refresh()
+        }}
+        onExit={() => navigate({ to: '/l/$leagueId', params: { leagueId } })}
+      />
+    )
+  }
 
   return (
     <div className="wrap">
@@ -29,9 +44,6 @@ export function Manager({ leagueId, token }: { leagueId: string; token: string }
         <div className="crumbs"><Link to="/l/$leagueId" params={{ leagueId }}>public standings</Link></div>
       </div>
 
-      {v.league.status === 'drafting' && v.league.mode === 'sequential' && (
-        <SequentialDraft view={v} leagueId={leagueId} token={token} onPicked={refresh} />
-      )}
       {v.league.status !== 'complete' && v.league.mode === 'autodraft' && (
         <WishlistEditor view={v} leagueId={leagueId} token={token} onSaved={refresh} />
       )}
@@ -48,60 +60,6 @@ export function Manager({ leagueId, token }: { leagueId: string; token: string }
         <Board view={v} />
       </div>
     </div>
-  )
-}
-
-function SequentialDraft({ view, leagueId, token, onPicked }: {
-  view: ManagerView; leagueId: string; token: string; onPicked: () => void
-}) {
-  const [err, setErr] = useState('')
-  const pick = useMutation({
-    mutationFn: (teamId: string) =>
-      apiFetch(`/leagues/${leagueId}/pick`, { method: 'POST', body: JSON.stringify({ token, team_id: teamId }) }),
-    onSuccess: () => { setErr(''); onPicked() },
-    onError: (e: Error) => setErr(e.message),
-  })
-  const picksLeft = view.onClockSeat == null ? 0 : (() => {
-    // how many picks until it's my turn (informational)
-    let count = 0
-    for (let o = view.league.currentOverall; o < 48; o++) {
-      const n = view.league.nManagers
-      const round = Math.floor(o / n), pos = o % n
-      const seat = round % 2 === 0 ? pos : n - 1 - pos
-      if (seat === view.me.seat) break
-      count++
-    }
-    return count
-  })()
-
-  return (
-    <>
-      <div className="upturn">
-        {view.onClock
-          ? <span className="big">🟢 You're up — make your pick</span>
-          : <span className="waiting">Waiting… {picksLeft} pick{picksLeft === 1 ? '' : 's'} until your turn</span>}
-        <span className="pill on">overall #{view.league.currentOverall + 1} / 48</span>
-      </div>
-      {err && <p className="err">{err}</p>}
-      <div className="panel">
-        <h2>Available teams</h2>
-        <p className="sec-sub">{view.available.length} left · sorted by FIFA rank</p>
-        <div className="teams">
-          {view.available.map((t: Team) => (
-            <button
-              key={t.id}
-              className="team-pick"
-              disabled={!view.onClock || pick.isPending}
-              onClick={() => pick.mutate(t.id)}
-            >
-              <Flag code={t.code} name={t.name} />
-              <span className="nm">{t.abbr}</span>
-              <span className="rk">#{t.rank}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </>
   )
 }
 
