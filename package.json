@@ -1,0 +1,17 @@
+{
+  "name": "worldcup-2026-cf",
+  "private": true,
+  "packageManager": "pnpm@11.5.2",
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "ship": "pnpm --filter @wc/api run deploy",
+    "db:migrate": "pnpm --filter @wc/api run db:migrate",
+    "db:migrate:remote": "pnpm --filter @wc/api run db:migrate:remote",
+    "db:seed": "pnpm --filter @wc/api run db:seed"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.3"
+  }
+}

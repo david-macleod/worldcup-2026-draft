@@ -1,0 +1,24 @@
+{
+  "name": "@wc/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 8787",
+    "build": "echo \"@wc/api: nothing to build (Worker runs from src)\"",
+    "deploy": "wrangler deploy --env production",
+    "db:migrate": "wrangler d1 migrations apply worldcup --local",
+    "db:migrate:remote": "wrangler d1 migrations apply worldcup --remote",
+    "db:seed": "wrangler d1 execute worldcup --local --file=src/db/seed.sql",
+    "db:seed:remote": "wrangler d1 execute worldcup --remote --file=src/db/seed.sql",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "hono": "^4.6.14"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241218.0",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "wrangler": "^3.95.0"
+  }
+}
