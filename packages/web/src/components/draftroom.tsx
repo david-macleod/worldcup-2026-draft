@@ -269,19 +269,11 @@ function DraftReveal({ team, player, teams, onConfirm, onCancel, busy, err }: {
   )
 }
 
-const THEMES = [
-  { id: 'midnight', accent: '#2bd47d', swatch: '#10151e' },
-  { id: 'broadcast', accent: '#0a7d4d', swatch: '#ffffff' },
-  { id: 'pitch', accent: '#ffd34d', swatch: '#0e2a1f' },
-]
-
 export function DraftRoom({ view, onPick, onExit }: {
   view: ManagerView
   onPick: (teamId: string) => Promise<void>
   onExit: () => void
 }) {
-  const [theme, setTheme] = useState(() => localStorage.getItem('wc-theme') || 'midnight')
-  const accent = THEMES.find((t) => t.id === theme)?.accent || '#2bd47d'
   const [sortId, setSortId] = useState('rank')
   const [pending, setPending] = useState<string | null>(null)
   const [zoom, setZoom] = useState<number | null>(null)
@@ -296,8 +288,6 @@ export function DraftRoom({ view, onPick, onExit }: {
   const onClockSeat = done ? null : pickToCell(current, n).col
   const onClockManager = onClockSeat != null ? view.managers.find((m) => m.id === view.league.order[onClockSeat]) : undefined
   const me = view.managers.find((m) => m.id === view.me.id) || view.me
-
-  const setThemePersist = (id: string) => { setTheme(id); localStorage.setItem('wc-theme', id) }
 
   const confirm = async () => {
     if (!pending) return
@@ -318,7 +308,7 @@ export function DraftRoom({ view, onPick, onExit }: {
   }
 
   return (
-    <div className="draft-room" data-theme={theme} style={{ ['--accent' as string]: accent }}>
+    <div className="draft-room" data-theme="pitch" style={{ ['--accent' as string]: '#2bd47d' }}>
       <div className="draft">
         <header className="masthead">
           <button className="mh-brand" onClick={onExit} title="Back to standings">
@@ -332,12 +322,6 @@ export function DraftRoom({ view, onPick, onExit }: {
             </div>
           )}
           <div className="mh-remain"><b>{48 - view.picks.length}</b>/48 teams remaining</div>
-          <div className="mh-themes">
-            {THEMES.map((t) => (
-              <button key={t.id} className={clsx('mh-theme', theme === t.id && 'active')}
-                style={{ background: t.swatch }} title={t.id} onClick={() => setThemePersist(t.id)} />
-            ))}
-          </div>
         </header>
 
         {done && (
