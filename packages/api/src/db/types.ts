@@ -49,6 +49,8 @@ export interface LeagueRow {
   order_json: string | null
   current_overall: number
   created_at: string
+  n_managers: number
+  n_rounds: number
 }
 
 export interface ManagerRow {

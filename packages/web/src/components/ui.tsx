@@ -23,7 +23,7 @@ function pickToCell(overall: number, n: number) {
 
 export function Board({ view }: { view: LeagueView }) {
   const n = view.league.nManagers
-  const rounds = 6
+  const rounds = view.league.nRounds
   const tmap = teamMap(view.teams)
   const order = view.league.order
   const seatName = (seat: number) => {

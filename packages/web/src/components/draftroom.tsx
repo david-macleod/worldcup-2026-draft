@@ -47,7 +47,7 @@ const SORT_OPTS: SortOpt[] = [
 function BoardGrid({ view, zoomOverall }: { view: ManagerView; zoomOverall: number | null }) {
   const order = view.league.order
   const n = view.league.nManagers
-  const rounds = 6
+  const rounds = view.league.nRounds
   const teamsById = useMemo(() => Object.fromEntries(view.teams.map((t) => [t.id, t])), [view.teams])
   const mgrById = useMemo(() => Object.fromEntries(view.managers.map((m) => [m.id, m])), [view.managers])
   const picksByOverall = useMemo(() => {
@@ -321,7 +321,7 @@ export function DraftRoom({ view, onPick, onExit }: {
               <span className="mh-turn-name"><PlayerDot player={onClockManager} size={22} />{onClockManager.name}</span>
             </div>
           )}
-          <div className="mh-remain"><b>{48 - view.picks.length}</b>/48 teams remaining</div>
+          <div className="mh-remain"><b>{view.league.totalPicks - view.picks.length}</b>/{view.league.totalPicks} picks left</div>
         </header>
 
         {done && (

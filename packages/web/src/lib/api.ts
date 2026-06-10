@@ -44,7 +44,7 @@ export interface LeaderboardEntry {
   squad: Array<{ teamId: string; points: TeamPoints }>
 }
 export interface LeagueView {
-  league: { id: string; name: string; mode: string; status: string; currentOverall: number; order: string[]; nManagers: number }
+  league: { id: string; name: string; mode: string; status: string; currentOverall: number; order: string[]; nManagers: number; nRounds: number; totalPicks: number }
   managers: Array<{ id: string; name: string; seat: number | null; color: string }>
   picks: Array<{ overall: number; managerId: string; teamId: string }>
   teams: Team[]
@@ -61,5 +61,6 @@ export interface ManagerView extends LeagueView {
 }
 export interface AdminLeague {
   id: string; name: string; mode: string; status: string; currentOverall: number; picks: number
+  nManagers: number; nRounds: number; totalPicks: number
   managers: Array<{ id: string; name: string; seat: number | null; color: string; link: string }>
 }

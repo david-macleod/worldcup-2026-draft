@@ -4,7 +4,7 @@ import {
   getLeague, managersOf, picksOf, managerByToken, wishlistOf, allTeams,
 } from '../db'
 import { buildLeagueView } from '../services/league-view'
-import { seatForOverall, N_PICKS, N_MANAGERS } from '../lib/snake'
+import { seatForOverall, picksFor } from '../lib/snake'
 
 // Manager-facing routes. The token IS the identity — validated against managers.token.
 export const managerRoutes = new Hono<{ Bindings: Env }>()
@@ -24,7 +24,7 @@ managerRoutes.get('/leagues/:id/me', async (c) => {
   const pickedIds = new Set(view.picks.map((p) => p.teamId))
   const available = view.teams.filter((t) => !pickedIds.has(t.id))
   const onClockSeat = view.league.status === 'drafting'
-    ? seatForOverall(view.league.currentOverall, N_MANAGERS) : null
+    ? seatForOverall(view.league.currentOverall, view.league.nManagers) : null
   const onClock = onClockSeat != null && me.seat === onClockSeat
 
   const wishlist = view.league.mode === 'autodraft'
@@ -56,7 +56,7 @@ managerRoutes.post('/leagues/:id/pick', async (c) => {
   if (!me || me.league_id !== leagueId) return c.json({ error: 'invalid token' }, 401)
 
   const overall = league.current_overall
-  const onClockSeat = seatForOverall(overall, N_MANAGERS)
+  const onClockSeat = seatForOverall(overall, league.n_managers)
   if (me.seat !== onClockSeat) return c.json({ error: 'not your turn' }, 409)
 
   // team must exist and still be available
@@ -66,7 +66,7 @@ managerRoutes.post('/leagues/:id/pick', async (c) => {
   if (!teams.some((t) => t.id === body.team_id)) return c.json({ error: 'unknown team' }, 400)
 
   const next = overall + 1
-  const nextStatus = next >= N_PICKS ? 'complete' : 'drafting'
+  const nextStatus = next >= picksFor(league.n_managers, league.n_rounds) ? 'complete' : 'drafting'
   const now = new Date().toISOString()
 
   try {

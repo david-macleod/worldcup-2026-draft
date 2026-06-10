@@ -71,19 +71,39 @@ function Console({ onSignout }: { onSignout: () => void }) {
   )
 }
 
+const MIN_MANAGERS = 2, MAX_MANAGERS = 24, MIN_ROUNDS = 1, MAX_ROUNDS = 12, FIELD = 48
+
 function CreateLeague({ onCreated }: { onCreated: () => void }) {
   const [name, setName] = useState('')
   const [mode, setMode] = useState('sequential')
-  const [names, setNames] = useState<string[]>(Array.from({ length: 8 }, (_, i) => `Manager ${i + 1}`))
+  const [rounds, setRounds] = useState(6)
+  const [names, setNames] = useState<string[]>(Array.from({ length: 8 }, (_, i) => `Player ${String.fromCharCode(65 + i)}`))
   const [out, setOut] = useState<AdminLeague['managers'] | null>(null)
   const [err, setErr] = useState('')
+
+  // Grow/shrink the name list when the participant count changes (keep what's typed).
+  const setCount = (next: number) => {
+    const n = Math.max(MIN_MANAGERS, Math.min(MAX_MANAGERS, next))
+    setNames((prev) => {
+      if (n <= prev.length) return prev.slice(0, n)
+      return [...prev, ...Array.from({ length: n - prev.length }, (_, i) =>
+        `Player ${String.fromCharCode(65 + prev.length + i)}`)]
+    })
+  }
+  const count = names.length
+  const total = count * rounds
+  const overField = total > FIELD
+  const blankName = names.some((n) => !n.trim())
+
   const create = useMutation({
     mutationFn: () => apiFetch<{ leagueId: string; managers: AdminLeague['managers'] }>('/admin/leagues', {
-      admin: true, method: 'POST', body: JSON.stringify({ name, mode, managers: names.map((n) => ({ name: n })) }),
+      admin: true, method: 'POST',
+      body: JSON.stringify({ name, mode, rounds, managers: names.map((n) => ({ name: n })) }),
     }),
     onSuccess: (r) => { setOut(r.managers); setErr(''); onCreated() },
     onError: (e: Error) => setErr(e.message),
   })
+
   return (
     <div className="panel">
       <h2>New league</h2>
@@ -94,15 +114,31 @@ function CreateLeague({ onCreated }: { onCreated: () => void }) {
           <option value="autodraft">Autodraft — ranked wishlists</option>
         </select>
       </div>
-      <label>8 managers</label>
+      <div className="row">
+        <div className="field" style={{ flex: 1 }}>
+          <label>Participants ({MIN_MANAGERS}–{MAX_MANAGERS})</label>
+          <input type="number" min={MIN_MANAGERS} max={MAX_MANAGERS} value={count}
+            onChange={(e) => setCount(parseInt(e.target.value || '0', 10))} />
+        </div>
+        <div className="field" style={{ flex: 1 }}>
+          <label>Teams per manager ({MIN_ROUNDS}–{MAX_ROUNDS})</label>
+          <input type="number" min={MIN_ROUNDS} max={MAX_ROUNDS} value={rounds}
+            onChange={(e) => setRounds(Math.max(MIN_ROUNDS, Math.min(MAX_ROUNDS, parseInt(e.target.value || '0', 10) || MIN_ROUNDS)))} />
+        </div>
+      </div>
+      <p className="sec-sub" style={{ color: overField ? '#ff8b8b' : undefined }}>
+        {count} × {rounds} = <b>{total}</b> of {FIELD} nations drafted{overField ? ' — too many, reduce participants or teams each' : total < FIELD ? ` (${FIELD - total} nations go undrafted)` : ' (every nation owned)'}
+      </p>
+      <label>Participant names</label>
       <div className="grid2">
         {names.map((n, i) => (
-          <input key={i} value={n} onChange={(e) => { const x = [...names]; x[i] = e.target.value; setNames(x) }} />
+          <input key={i} value={n} placeholder={`Player ${i + 1}`}
+            onChange={(e) => { const x = [...names]; x[i] = e.target.value; setNames(x) }} />
         ))}
       </div>
       {err && <p className="err">{err}</p>}
       <div className="row" style={{ marginTop: 12 }}>
-        <button className="btn" disabled={create.isPending || !name} onClick={() => create.mutate()}>Create league</button>
+        <button className="btn" disabled={create.isPending || !name || overField || blankName} onClick={() => create.mutate()}>Create league</button>
       </div>
       {out && (
         <div style={{ marginTop: 14 }}>

@@ -6,7 +6,6 @@ import {
   getLeague, managersOf, picksOf, allTeams, allMatches,
 } from '../db'
 import { computeLeaderboard } from './scoring'
-import { N_MANAGERS } from '../lib/snake'
 
 export async function buildLeagueView(db: D1Database, leagueId: string) {
   const league = await getLeague(db, leagueId)
@@ -32,7 +31,9 @@ export async function buildLeagueView(db: D1Database, leagueId: string) {
       status: league.status,
       currentOverall: league.current_overall,
       order,
-      nManagers: N_MANAGERS,
+      nManagers: league.n_managers,
+      nRounds: league.n_rounds,
+      totalPicks: league.n_managers * league.n_rounds,
     },
     managers: managers.map((m) => ({ id: m.id, name: m.name, seat: m.seat, color: m.color })),
     picks: picks.map((p) => ({ overall: p.overall, managerId: p.manager_id, teamId: p.team_id })),

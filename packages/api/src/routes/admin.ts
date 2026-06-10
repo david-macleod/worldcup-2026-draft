@@ -6,13 +6,23 @@ import {
 import { adminAuth } from '../middleware/admin-auth'
 import { resolveAutodraft } from '../services/autodraft'
 import { MANAGER_COLORS } from '../lib/colors'
-import { N_MANAGERS, N_ROUNDS, N_PICKS, seatForOverall } from '../lib/snake'
+import {
+  seatForOverall, picksFor, validateLeagueSize, N_ROUNDS, MIN_MANAGERS, MAX_MANAGERS,
+} from '../lib/snake'
 
 export const adminRoutes = new Hono<{ Bindings: Env }>()
 adminRoutes.use('*', adminAuth)
 
-function managerLink(leagueId: string, token: string) {
-  return `/l/${leagueId}/m/${token}`
+// URL-safe slug of a manager name, for a friendlier link. The token (last
+// segment) remains the actual identity; the slug is decorative.
+function slugify(name: string): string {
+  const s = name.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+  return s || 'manager'
+}
+
+// Manager link: /l/{leagueId}/m/{token}/{name-slug} — name is visible, token authenticates.
+function managerLink(leagueId: string, token: string, name: string) {
+  return `/l/${leagueId}/m/${token}/${slugify(name)}`
 }
 
 // Fisher–Yates shuffle (Worker runtime — Math.random is available here).
@@ -27,27 +37,34 @@ function shuffle<T>(arr: T[]): T[] {
 
 // POST /api/admin/leagues — create a sequential|autodraft league + N managers + tokens.
 adminRoutes.post('/leagues', async (c) => {
-  const body = await c.req.json<{ name?: string; mode?: LeagueMode; managers?: Array<{ name: string }> }>()
+  const body = await c.req.json<{ name?: string; mode?: LeagueMode; rounds?: number; managers?: Array<{ name: string }> }>()
     .catch(() => ({} as any))
   const { name, mode, managers } = body
+  const rounds = body.rounds ?? N_ROUNDS
   if (!name || (mode !== 'sequential' && mode !== 'autodraft')) {
     return c.json({ error: 'name and mode (sequential|autodraft) required; use /import for imported' }, 400)
   }
-  if (!Array.isArray(managers) || managers.length !== N_MANAGERS) {
-    return c.json({ error: `exactly ${N_MANAGERS} managers required` }, 400)
+  if (!Array.isArray(managers) || managers.length < MIN_MANAGERS || managers.length > MAX_MANAGERS) {
+    return c.json({ error: `between ${MIN_MANAGERS} and ${MAX_MANAGERS} managers required` }, 400)
+  }
+  const nManagers = managers.length
+  const sizeErr = validateLeagueSize(nManagers, rounds)
+  if (sizeErr) return c.json({ error: sizeErr }, 400)
+  if (managers.some((m) => !m.name || !String(m.name).trim())) {
+    return c.json({ error: 'every manager needs a name' }, 400)
   }
 
   const leagueId = crypto.randomUUID()
   const now = new Date().toISOString()
   const created = managers.map((m, i) => ({
-    id: crypto.randomUUID(), name: String(m.name || `Manager ${i + 1}`),
+    id: crypto.randomUUID(), name: String(m.name).trim(),
     token: crypto.randomUUID(), color: MANAGER_COLORS[i % MANAGER_COLORS.length],
   }))
 
   await c.env.DB.batch([
     c.env.DB.prepare(
-      'INSERT INTO leagues (id, name, mode, status, current_overall, created_at) VALUES (?, ?, ?, ?, 0, ?)',
-    ).bind(leagueId, name, mode, 'setup', now),
+      'INSERT INTO leagues (id, name, mode, status, current_overall, created_at, n_managers, n_rounds) VALUES (?, ?, ?, ?, 0, ?, ?, ?)',
+    ).bind(leagueId, name, mode, 'setup', now, nManagers, rounds),
     ...created.map((m) =>
       c.env.DB.prepare('INSERT INTO managers (id, league_id, name, token, color) VALUES (?, ?, ?, ?, ?)')
         .bind(m.id, leagueId, m.name, m.token, m.color)),
@@ -56,7 +73,8 @@ adminRoutes.post('/leagues', async (c) => {
   return c.json({
     ok: true,
     leagueId,
-    managers: created.map((m) => ({ id: m.id, name: m.name, token: m.token, link: managerLink(leagueId, m.token) })),
+    nManagers, nRounds: rounds,
+    managers: created.map((m) => ({ id: m.id, name: m.name, token: m.token, link: managerLink(leagueId, m.token, m.name) })),
   }, 201)
 })
 
@@ -101,13 +119,14 @@ adminRoutes.post('/leagues/:id/resolve', async (c) => {
   if (league.status !== 'drafting') return c.json({ error: `league is ${league.status}; start it first` }, 409)
 
   const order: string[] = league.order_json ? JSON.parse(league.order_json) : []
-  if (order.length !== N_MANAGERS) return c.json({ error: 'order not locked' }, 409)
+  if (order.length !== league.n_managers) return c.json({ error: 'order not locked' }, 409)
 
   const [teams, wishRows] = await Promise.all([allTeams(c.env.DB), allWishlists(c.env.DB, leagueId)])
   const wishlists: Record<string, string[]> = {}
   for (const w of wishRows) (wishlists[w.manager_id] ||= []).push(w.team_id)
 
-  const resolved = resolveAutodraft(order, wishlists, teams.map((t) => ({ id: t.id, rank: t.rank })))
+  const resolved = resolveAutodraft(
+    order, wishlists, teams.map((t) => ({ id: t.id, rank: t.rank })), league.n_managers, league.n_rounds)
   const now = new Date().toISOString()
 
   await c.env.DB.batch([
@@ -116,7 +135,7 @@ adminRoutes.post('/leagues/:id/resolve', async (c) => {
         'INSERT INTO picks (id, league_id, overall, manager_id, team_id, created_at) VALUES (?, ?, ?, ?, ?, ?)',
       ).bind(crypto.randomUUID(), leagueId, p.overall, p.managerId, p.teamId, now)),
     c.env.DB.prepare('UPDATE leagues SET status = ?, current_overall = ? WHERE id = ?')
-      .bind('complete', N_PICKS, leagueId),
+      .bind('complete', resolved.length, leagueId),
   ])
 
   return c.json({ ok: true, picks: resolved.length })
@@ -128,14 +147,20 @@ adminRoutes.post('/leagues/import', async (c) => {
     .catch(() => ({} as any))
   const { name, squads } = body
   if (!name || !Array.isArray(squads)) return c.json({ error: 'name and squads[] required' }, 400)
-  if (squads.length !== N_MANAGERS) return c.json({ error: `exactly ${N_MANAGERS} managers required` }, 400)
-  if (!squads.every((s) => Array.isArray(s.team_ids) && s.team_ids.length === N_ROUNDS)) {
-    return c.json({ error: `each manager must own exactly ${N_ROUNDS} teams` }, 400)
+  if (squads.length < MIN_MANAGERS || squads.length > MAX_MANAGERS) {
+    return c.json({ error: `between ${MIN_MANAGERS} and ${MAX_MANAGERS} managers required` }, 400)
   }
+  const nManagers = squads.length
+  const nRounds = Array.isArray(squads[0]?.team_ids) ? squads[0].team_ids.length : 0
+  if (!squads.every((s) => Array.isArray(s.team_ids) && s.team_ids.length === nRounds)) {
+    return c.json({ error: 'every manager must own the same number of teams' }, 400)
+  }
+  const sizeErr = validateLeagueSize(nManagers, nRounds)
+  if (sizeErr) return c.json({ error: sizeErr }, 400)
 
+  const total = picksFor(nManagers, nRounds)
   const flat = squads.flatMap((s) => s.team_ids)
-  if (flat.length !== N_PICKS) return c.json({ error: `expected ${N_PICKS} team ids, got ${flat.length}` }, 400)
-  if (new Set(flat).size !== N_PICKS) return c.json({ error: 'duplicate team ids in import' }, 400)
+  if (new Set(flat).size !== total) return c.json({ error: 'duplicate team ids in import' }, 400)
   const teams = await allTeams(c.env.DB)
   const validIds = new Set(teams.map((t) => t.id))
   const unknown = flat.filter((id) => !validIds.has(id))
@@ -152,9 +177,9 @@ adminRoutes.post('/leagues/import', async (c) => {
 
   const pickStmts = []
   // Lay picks out in snake order so the board renders sensibly: round r, seat by snake.
-  for (let overall = 0; overall < N_PICKS; overall++) {
-    const seat = seatForOverall(overall)
-    const round = Math.floor(overall / N_MANAGERS)
+  for (let overall = 0; overall < total; overall++) {
+    const seat = seatForOverall(overall, nManagers)
+    const round = Math.floor(overall / nManagers)
     const m = created[seat]
     const teamId = m.teamIds[round]
     pickStmts.push(
@@ -166,8 +191,8 @@ adminRoutes.post('/leagues/import', async (c) => {
 
   await c.env.DB.batch([
     c.env.DB.prepare(
-      'INSERT INTO leagues (id, name, mode, status, order_json, current_overall, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    ).bind(leagueId, name, 'imported', 'complete', JSON.stringify(order), N_PICKS, now),
+      'INSERT INTO leagues (id, name, mode, status, order_json, current_overall, created_at, n_managers, n_rounds) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    ).bind(leagueId, name, 'imported', 'complete', JSON.stringify(order), total, now, nManagers, nRounds),
     ...created.map((m, seat) =>
       c.env.DB.prepare('INSERT INTO managers (id, league_id, name, token, seat, color) VALUES (?, ?, ?, ?, ?, ?)')
         .bind(m.id, leagueId, m.name, m.token, seat, m.color)),
@@ -175,8 +200,8 @@ adminRoutes.post('/leagues/import', async (c) => {
   ])
 
   return c.json({
-    ok: true, leagueId,
-    managers: created.map((m) => ({ id: m.id, name: m.name, token: m.token, link: managerLink(leagueId, m.token) })),
+    ok: true, leagueId, nManagers, nRounds,
+    managers: created.map((m) => ({ id: m.id, name: m.name, token: m.token, link: managerLink(leagueId, m.token, m.name) })),
   }, 201)
 })
 
@@ -220,7 +245,8 @@ adminRoutes.get('/leagues', async (c) => {
     out.push({
       id: lg.id, name: lg.name, mode: lg.mode, status: lg.status,
       currentOverall: lg.current_overall, picks: picks.length,
-      managers: managers.map((m) => ({ id: m.id, name: m.name, seat: m.seat, color: m.color, link: managerLink(lg.id, m.token) })),
+      nManagers: lg.n_managers, nRounds: lg.n_rounds, totalPicks: lg.n_managers * lg.n_rounds,
+      managers: managers.map((m) => ({ id: m.id, name: m.name, seat: m.seat, color: m.color, link: managerLink(lg.id, m.token, m.name) })),
     })
   }
   return c.json({ leagues: out })

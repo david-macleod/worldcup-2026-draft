@@ -34,7 +34,18 @@ const managerRoute = createRoute({
   },
 })
 
-const routeTree = rootRoute.addChildren([indexRoute, adminRoute, leagueRoute, managerRoute])
+// Friendlier link form with the manager's name as a trailing slug. The token still
+// authenticates; the name segment is decorative (ignored).
+const managerNamedRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/l/$leagueId/m/$token/$name',
+  component: function ManagerNamedRoute() {
+    const { leagueId, token } = useParams({ from: '/l/$leagueId/m/$token/$name' })
+    return <Manager leagueId={leagueId} token={token} />
+  },
+})
+
+const routeTree = rootRoute.addChildren([indexRoute, adminRoute, leagueRoute, managerRoute, managerNamedRoute])
 const router = createRouter({ routeTree })
 
 declare module '@tanstack/react-router' {
