@@ -6,6 +6,7 @@ import {
   type AdminLeague, type Match,
 } from '../lib/api'
 import { Flag } from '../components/ui'
+import { TEAMS } from '../lib/teams'
 
 export function Admin() {
   const [authed, setAuthed] = useState(!!getAdminPassword())
@@ -160,6 +161,11 @@ function LeagueCard({ lg, onChange }: { lg: AdminLeague; onChange: () => void })
   const [err, setErr] = useState('')
   const act = (path: string) => apiFetch(path, { admin: true, method: 'POST', body: '{}' })
     .then(() => { setErr(''); onChange() }).catch((e: Error) => setErr(e.message))
+  const del = () => {
+    if (!confirm(`Delete "${lg.name}"? This removes its managers, picks, and wishlists for good.`)) return
+    apiFetch(`/admin/leagues/${lg.id}`, { admin: true, method: 'DELETE' })
+      .then(() => { setErr(''); onChange() }).catch((e: Error) => setErr(e.message))
+  }
   return (
     <div style={{ border: '1px solid var(--line-soft)', borderRadius: 11, padding: 12 }}>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
@@ -171,6 +177,7 @@ function LeagueCard({ lg, onChange }: { lg: AdminLeague; onChange: () => void })
           <Link to="/l/$leagueId" params={{ leagueId: lg.id }} className="btn ghost sm">standings</Link>
           {lg.status === 'setup' && <button className="btn sm" onClick={() => act(`/admin/leagues/${lg.id}/start`)}>Spin &amp; start</button>}
           {lg.status === 'drafting' && lg.mode === 'autodraft' && <button className="btn sm" onClick={() => act(`/admin/leagues/${lg.id}/resolve`)}>Resolve</button>}
+          <button className="btn ghost sm danger" onClick={del}>Delete</button>
         </div>
       </div>
       {err && <p className="err">{err}</p>}
@@ -224,8 +231,8 @@ function MatchRow({ m, onSaved }: { m: Match; onSaved: () => void }) {
   return (
     <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
       <span className="pill">{m.stage === 'group' ? `Grp ${m.grp}` : m.stage} {m.id}</span>
-      <span className="mono" style={{ fontFamily: 'var(--mono)', fontSize: 12 }}>
-        {m.home_team_id ?? '—'} <b>v</b> {m.away_team_id ?? '—'}
+      <span className="row" style={{ gap: 6, alignItems: 'center', fontSize: 13 }}>
+        <TeamName id={m.home_team_id} /> <b style={{ opacity: .5 }}>v</b> <TeamName id={m.away_team_id} />
       </span>
       <input style={{ width: 56 }} value={hg} onChange={(e) => setHg(e.target.value)} placeholder="–" />
       <input style={{ width: 56 }} value={ag} onChange={(e) => setAg(e.target.value)} placeholder="–" />
@@ -236,4 +243,11 @@ function MatchRow({ m, onSaved }: { m: Match; onSaved: () => void }) {
       {err && <span className="err">{err}</span>}
     </div>
   )
+}
+
+function TeamName({ id }: { id: string | null }) {
+  if (!id) return <span className="muted">TBD</span>
+  const t = TEAMS[id]
+  if (!t) return <span className="mono">{id}</span>
+  return <span className="row" style={{ gap: 5, alignItems: 'center' }}><Flag code={t.code} name={t.name} /> {t.name}</span>
 }

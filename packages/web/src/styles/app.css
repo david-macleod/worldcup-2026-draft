@@ -71,6 +71,8 @@ h1, h2, h3 { margin: 0; }
 .btn:disabled { opacity: .4; cursor: not-allowed; }
 .btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); }
 .btn.sm { padding: 5px 10px; font-size: 12px; border-radius: 8px; }
+.btn.danger { color: #e2554b; border-color: rgba(226, 85, 75, .5); }
+.btn.danger:hover { background: rgba(226, 85, 75, .12); }
 
 input, select, textarea {
   font-family: var(--sans); font-size: 14px; color: var(--fg);
