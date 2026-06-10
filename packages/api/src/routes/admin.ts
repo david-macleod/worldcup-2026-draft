@@ -236,6 +236,28 @@ adminRoutes.delete('/leagues/:id', async (c) => {
   return c.json({ ok: true })
 })
 
+// PATCH /api/admin/leagues/:id — rename a league.
+adminRoutes.patch('/leagues/:id', async (c) => {
+  const id = c.req.param('id')
+  const body = await c.req.json<{ name?: string }>().catch(() => ({} as { name?: string }))
+  const name = body.name?.trim()
+  if (!name) return c.json({ error: 'name required' }, 400)
+  const { meta } = await c.env.DB.prepare('UPDATE leagues SET name = ? WHERE id = ?').bind(name, id).run()
+  if (!meta.changes) return c.json({ error: 'league not found' }, 404)
+  return c.json({ ok: true })
+})
+
+// PATCH /api/admin/managers/:id — rename a manager.
+adminRoutes.patch('/managers/:id', async (c) => {
+  const id = c.req.param('id')
+  const body = await c.req.json<{ name?: string }>().catch(() => ({} as { name?: string }))
+  const name = body.name?.trim()
+  if (!name) return c.json({ error: 'name required' }, 400)
+  const { meta } = await c.env.DB.prepare('UPDATE managers SET name = ? WHERE id = ?').bind(name, id).run()
+  if (!meta.changes) return c.json({ error: 'manager not found' }, 404)
+  return c.json({ ok: true })
+})
+
 // GET /api/admin/matches — the shared tournament grid for result entry.
 adminRoutes.get('/matches', async (c) => {
   const matches = await allMatches(c.env.DB)

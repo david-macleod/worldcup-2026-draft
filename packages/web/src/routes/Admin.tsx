@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import {
@@ -42,6 +42,20 @@ function Console({ onSignout }: { onSignout: () => void }) {
   const qc = useQueryClient()
   const leagues = useQuery({ queryKey: ['admin-leagues'], queryFn: () => apiFetch<{ leagues: AdminLeague[] }>('/admin/leagues', { admin: true }) })
   const reload = () => qc.invalidateQueries({ queryKey: ['admin-leagues'] })
+  const [scrollTo, setScrollTo] = useState<string | null>(null)
+  const created = (leagueId?: string) => { reload(); if (leagueId) setScrollTo(leagueId) }
+
+  // After the list refetches, scroll the freshly created league into view and flash it.
+  useEffect(() => {
+    if (!scrollTo) return
+    const el = document.getElementById(`league-${scrollTo}`)
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el.classList.add('flash')
+    const t = setTimeout(() => el.classList.remove('flash'), 1600)
+    setScrollTo(null)
+    return () => clearTimeout(t)
+  }, [scrollTo, leagues.data])
 
   return (
     <div className="wrap">
@@ -54,7 +68,7 @@ function Console({ onSignout }: { onSignout: () => void }) {
       </div>
 
       <div className="split">
-        <CreateLeague onCreated={reload} />
+        <CreateLeague onCreated={created} />
         <ImportLeague onCreated={reload} />
       </div>
 
@@ -72,17 +86,16 @@ function Console({ onSignout }: { onSignout: () => void }) {
   )
 }
 
-function CreateLeague({ onCreated }: { onCreated: () => void }) {
+function CreateLeague({ onCreated }: { onCreated: (leagueId?: string) => void }) {
   const [name, setName] = useState('')
   const [mode, setMode] = useState('sequential')
   const [names, setNames] = useState<string[]>(Array.from({ length: 8 }, (_, i) => `Manager ${i + 1}`))
-  const [out, setOut] = useState<AdminLeague['managers'] | null>(null)
   const [err, setErr] = useState('')
   const create = useMutation({
     mutationFn: () => apiFetch<{ leagueId: string; managers: AdminLeague['managers'] }>('/admin/leagues', {
       admin: true, method: 'POST', body: JSON.stringify({ name, mode, managers: names.map((n) => ({ name: n })) }),
     }),
-    onSuccess: (r) => { setOut(r.managers); setErr(''); onCreated() },
+    onSuccess: (r) => { setErr(''); setName(''); onCreated(r.leagueId) },
     onError: (e: Error) => setErr(e.message),
   })
   return (
@@ -105,14 +118,6 @@ function CreateLeague({ onCreated }: { onCreated: () => void }) {
       <div className="row" style={{ marginTop: 12 }}>
         <button className="btn" disabled={create.isPending || !name} onClick={() => create.mutate()}>Create league</button>
       </div>
-      {out && (
-        <div style={{ marginTop: 14 }}>
-          <label>Manager links — share these out-of-band</label>
-          <div className="stack">
-            {out.map((m) => <ManagerLink key={m.id} name={m.name} link={m.link} />)}
-          </div>
-        </div>
-      )}
     </div>
   )
 }
@@ -146,14 +151,47 @@ function ImportLeague({ onCreated }: { onCreated: () => void }) {
   )
 }
 
-function ManagerLink({ name, link }: { name: string; link: string }) {
+function ManagerLink({ name, link, seat, onRename }: {
+  name: string; link: string; seat?: number | null; onRename?: (name: string) => void
+}) {
   const url = `${location.origin}${link}`
   return (
     <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-      <span><b>{name}</b></span>
+      <span className="row" style={{ gap: 6, minWidth: 120 }}>
+        {onRename ? <InlineEdit value={name} onSave={onRename} bold /> : <b>{name}</b>}
+        {seat != null && <span className="muted" style={{ fontSize: 12 }}>· seat {seat + 1}</span>}
+      </span>
       <span className="linkbox" style={{ flex: 1 }}>{url}</span>
+      <a className="btn ghost sm" href={url} target="_blank" rel="noopener noreferrer">view</a>
       <button className="btn ghost sm" onClick={() => navigator.clipboard?.writeText(url)}>copy</button>
     </div>
+  )
+}
+
+// Click-to-edit text: shows plain text, swaps to an input on click. Commits on
+// Enter/blur, cancels on Escape.
+function InlineEdit({ value, onSave, bold }: { value: string; onSave: (v: string) => void; bold?: boolean }) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value)
+  useEffect(() => { if (!editing) setDraft(value) }, [value, editing])
+  const commit = () => {
+    setEditing(false)
+    const v = draft.trim()
+    if (v && v !== value) onSave(v); else setDraft(value)
+  }
+  if (editing) {
+    return (
+      <input className="inline-edit" autoFocus value={draft} size={Math.max(draft.length, 4)}
+        onChange={(e) => setDraft(e.target.value)} onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') commit()
+          if (e.key === 'Escape') { setDraft(value); setEditing(false) }
+        }} />
+    )
+  }
+  return (
+    <span className={'inline-edit-text' + (bold ? ' b' : '')} title="Click to rename"
+      onClick={() => setEditing(true)}>{value}</span>
   )
 }
 
@@ -166,11 +204,15 @@ function LeagueCard({ lg, onChange }: { lg: AdminLeague; onChange: () => void })
     apiFetch(`/admin/leagues/${lg.id}`, { admin: true, method: 'DELETE' })
       .then(() => { setErr(''); onChange() }).catch((e: Error) => setErr(e.message))
   }
+  const rename = (path: string, name: string) => apiFetch(path, {
+    admin: true, method: 'PATCH', body: JSON.stringify({ name }),
+  }).then(() => { setErr(''); onChange() }).catch((e: Error) => setErr(e.message))
   return (
-    <div style={{ border: '1px solid var(--line-soft)', borderRadius: 11, padding: 12 }}>
+    <div id={`league-${lg.id}`} className="league-card" style={{ border: '1px solid var(--line-soft)', borderRadius: 11, padding: 12 }}>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <b>{lg.name}</b> <span className="pill">{lg.mode}</span> <span className="pill">{lg.status}</span>
+          <InlineEdit value={lg.name} bold onSave={(name) => rename(`/admin/leagues/${lg.id}`, name)} />
+          {' '}<span className="pill">{lg.mode}</span> <span className="pill">{lg.status}</span>
           <span className="muted" style={{ marginLeft: 8, fontFamily: 'var(--mono)', fontSize: 12 }}>{lg.picks}/48 picks</span>
         </div>
         <div className="row">
@@ -182,7 +224,10 @@ function LeagueCard({ lg, onChange }: { lg: AdminLeague; onChange: () => void })
       </div>
       {err && <p className="err">{err}</p>}
       <div className="stack" style={{ marginTop: 10 }}>
-        {lg.managers.map((m) => <ManagerLink key={m.id} name={`${m.name}${m.seat != null ? ` · seat ${m.seat + 1}` : ''}`} link={m.link} />)}
+        {lg.managers.map((m) => (
+          <ManagerLink key={m.id} name={m.name} link={m.link} seat={m.seat}
+            onRename={(name) => rename(`/admin/managers/${m.id}`, name)} />
+        ))}
       </div>
     </div>
   )
