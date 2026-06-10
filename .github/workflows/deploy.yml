@@ -27,5 +27,8 @@ jobs:
       - name: Apply D1 migrations
         run: pnpm --filter @wc/api exec wrangler d1 migrations apply worldcup --remote --env production
 
+      - name: Seed catalog (idempotent)
+        run: pnpm --filter @wc/api exec wrangler d1 execute worldcup --remote --env production --file=src/db/seed.sql
+
       - name: Deploy worker
         run: pnpm --filter @wc/api exec wrangler deploy --env production
