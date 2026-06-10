@@ -231,8 +231,10 @@ function MatchRow({ m, onSaved }: { m: Match; onSaved: () => void }) {
   return (
     <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
       <span className="pill">{m.stage === 'group' ? `Grp ${m.grp}` : m.stage} {m.id}</span>
-      <span className="row" style={{ gap: 6, alignItems: 'center', fontSize: 13 }}>
-        <TeamName id={m.home_team_id} /> <b style={{ opacity: .5 }}>v</b> <TeamName id={m.away_team_id} />
+      <span style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 6, fontSize: 13, width: 340 }}>
+        <TeamName id={m.home_team_id} side="home" />
+        <b style={{ opacity: .5 }}>v</b>
+        <TeamName id={m.away_team_id} side="away" />
       </span>
       <input style={{ width: 56 }} value={hg} onChange={(e) => setHg(e.target.value)} placeholder="–" />
       <input style={{ width: 56 }} value={ag} onChange={(e) => setAg(e.target.value)} placeholder="–" />
@@ -245,9 +247,17 @@ function MatchRow({ m, onSaved }: { m: Match; onSaved: () => void }) {
   )
 }
 
-function TeamName({ id }: { id: string | null }) {
-  if (!id) return <span className="muted">TBD</span>
+function TeamName({ id, side }: { id: string | null; side: 'home' | 'away' }) {
+  const home = side === 'home'
+  const justify = home ? 'flex-end' : 'flex-start'
+  if (!id) return <span className="muted" style={{ display: 'flex', justifyContent: justify }}>TBD</span>
   const t = TEAMS[id]
-  if (!t) return <span className="mono">{id}</span>
-  return <span className="row" style={{ gap: 5, alignItems: 'center' }}><Flag code={t.code} name={t.name} /> {t.name}</span>
+  if (!t) return <span className="mono" style={{ display: 'flex', justifyContent: justify }}>{id}</span>
+  return (
+    <span className="row" style={{ gap: 5, alignItems: 'center', justifyContent: justify, minWidth: 0 }}>
+      {home
+        ? <><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</span><Flag code={t.code} name={t.name} /></>
+        : <><Flag code={t.code} name={t.name} /><span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.name}</span></>}
+    </span>
+  )
 }
