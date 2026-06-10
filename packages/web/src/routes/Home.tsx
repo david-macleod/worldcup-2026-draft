@@ -18,6 +18,14 @@ export function Home() {
         <Link to="/admin" className="btn">Commissioner console →</Link>
       </div>
       <div className="panel">
+        <h2>The tournament</h2>
+        <p className="hint">
+          Browse all 48 nations by group, live group tables, and the knockout bracket
+          as real results come in — no link required.
+        </p>
+        <Link to="/fixtures" className="btn">View fixtures →</Link>
+      </div>
+      <div className="panel">
         <h2>Got a link?</h2>
         <p className="hint">
           Managers join from the personal link your commissioner sent you
