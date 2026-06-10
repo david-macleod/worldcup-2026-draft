@@ -6,6 +6,7 @@ import {
 import { adminAuth } from '../middleware/admin-auth'
 import { resolveAutodraft } from '../services/autodraft'
 import { MANAGER_COLORS } from '../lib/colors'
+import { newId } from '../lib/id'
 import {
   seatForOverall, picksFor, validateLeagueSize, N_ROUNDS, MIN_MANAGERS, MAX_MANAGERS,
 } from '../lib/snake'
@@ -54,11 +55,11 @@ adminRoutes.post('/leagues', async (c) => {
     return c.json({ error: 'every manager needs a name' }, 400)
   }
 
-  const leagueId = crypto.randomUUID()
+  const leagueId = newId()
   const now = new Date().toISOString()
   const created = managers.map((m, i) => ({
-    id: crypto.randomUUID(), name: String(m.name).trim(),
-    token: crypto.randomUUID(), color: MANAGER_COLORS[i % MANAGER_COLORS.length],
+    id: newId(), name: String(m.name).trim(),
+    token: newId(), color: MANAGER_COLORS[i % MANAGER_COLORS.length],
   }))
 
   await c.env.DB.batch([
@@ -166,11 +167,11 @@ adminRoutes.post('/leagues/import', async (c) => {
   const unknown = flat.filter((id) => !validIds.has(id))
   if (unknown.length) return c.json({ error: `unknown team ids: ${unknown.join(', ')}` }, 400)
 
-  const leagueId = crypto.randomUUID()
+  const leagueId = newId()
   const now = new Date().toISOString()
   const created = squads.map((s, i) => ({
-    id: crypto.randomUUID(), name: String(s.manager?.name || `Manager ${i + 1}`),
-    token: crypto.randomUUID(), color: MANAGER_COLORS[i % MANAGER_COLORS.length], teamIds: s.team_ids,
+    id: newId(), name: String(s.manager?.name || `Manager ${i + 1}`),
+    token: newId(), color: MANAGER_COLORS[i % MANAGER_COLORS.length], teamIds: s.team_ids,
   }))
   // Synthesise a snake order_json purely for board rendering (squads are the truth).
   const order = created.map((m) => m.id)
@@ -250,6 +251,37 @@ adminRoutes.get('/leagues', async (c) => {
     })
   }
   return c.json({ leagues: out })
+})
+
+// DELETE /api/admin/leagues/:id — remove a league; managers/picks/wishlists cascade.
+adminRoutes.delete('/leagues/:id', async (c) => {
+  const leagueId = c.req.param('id')
+  const league = await getLeague(c.env.DB, leagueId)
+  if (!league) return c.json({ error: 'league not found' }, 404)
+  await c.env.DB.prepare('DELETE FROM leagues WHERE id = ?').bind(leagueId).run()
+  return c.json({ ok: true })
+})
+
+// PATCH /api/admin/leagues/:id — rename a league.
+adminRoutes.patch('/leagues/:id', async (c) => {
+  const id = c.req.param('id')
+  const body = await c.req.json<{ name?: string }>().catch(() => ({} as { name?: string }))
+  const name = body.name?.trim()
+  if (!name) return c.json({ error: 'name required' }, 400)
+  const { meta } = await c.env.DB.prepare('UPDATE leagues SET name = ? WHERE id = ?').bind(name, id).run()
+  if (!meta.changes) return c.json({ error: 'league not found' }, 404)
+  return c.json({ ok: true })
+})
+
+// PATCH /api/admin/managers/:id — rename a manager.
+adminRoutes.patch('/managers/:id', async (c) => {
+  const id = c.req.param('id')
+  const body = await c.req.json<{ name?: string }>().catch(() => ({} as { name?: string }))
+  const name = body.name?.trim()
+  if (!name) return c.json({ error: 'name required' }, 400)
+  const { meta } = await c.env.DB.prepare('UPDATE managers SET name = ? WHERE id = ?').bind(name, id).run()
+  if (!meta.changes) return c.json({ error: 'manager not found' }, 404)
+  return c.json({ ok: true })
 })
 
 // GET /api/admin/matches — the shared tournament grid for result entry.
