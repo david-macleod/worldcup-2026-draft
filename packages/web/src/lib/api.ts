@@ -32,6 +32,7 @@ export interface Team {
 export interface Match {
   id: string; stage: string; grp: string | null
   home_team_id: string | null; away_team_id: string | null
+  kickoff: string | null
   home_goals: number | null; away_goals: number | null
   home_pens: number | null; away_pens: number | null; status: string
 }

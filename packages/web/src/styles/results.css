@@ -5,7 +5,7 @@
   --mono: 'JetBrains Mono', ui-monospace, monospace;
   --ui: 'Archivo', system-ui, sans-serif;
   --accent: #2bd47d; --gold: #f5c451;
-  --t1: #2bd47d; --t2: #f5953d; --t3: #ef5d6e;
+  --t1: #2bd47d; --t2: #f5953d; --t3: #d8394c;
   --bg: #081e15; --panel: #0e2a1f; --panel-2: #133527; --chip: #19402f;
   --hairline: rgba(255,255,255,.10); --hairline-2: rgba(255,255,255,.18);
   --text: #eafff3; --muted: #84b29b; --on-accent: #06140d;
@@ -39,7 +39,7 @@
 
 /* leaderboard */
 .results .lb-grid { display: flex; flex-direction: column; gap: 9px; }
-.results .lb-row { display: grid; grid-template-columns: 22px 110px 56px 1fr; align-items: center; column-gap: 12px;
+.results .lb-row { display: grid; grid-template-columns: 22px 80px 56px 1fr; align-items: center; column-gap: 12px;
   background: var(--panel); border: 1px solid var(--hairline); border-left: 3px solid var(--clk); border-radius: 12px; padding: 8px 16px; }
 .results .lb-row.leader { box-shadow: 0 0 0 1px var(--clk); }
 .results .lb-place { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--muted); }
@@ -75,6 +75,13 @@
 .results .gr-h b { color: var(--text); font-size: 15px; }
 .results .gr-matches { display: flex; flex-direction: column; gap: 8px; }
 .results .gr-match { display: flex; flex-direction: column; gap: 5px; background: var(--panel-2); border: 1px solid var(--hairline); border-radius: 10px; padding: 8px; }
+/* not played yet — grey background + greyer text */
+.results .gr-match.pending { background: #191d1c; border-color: rgba(255,255,255,.06); }
+.results .pm { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.results .pm-team { display: flex; align-items: center; gap: 7px; color: var(--muted); font-family: var(--mono); font-weight: 700; font-size: 13px; min-width: 0; }
+.results .pm-team.end { justify-content: flex-end; }
+.results .pm-team .flag { opacity: .5; filter: grayscale(.55); }
+.results .pm-v { font-family: var(--mono); font-size: 10.5px; color: var(--muted); opacity: .7; white-space: nowrap; flex: 0 0 auto; }
 .results .rr { display: flex; align-items: center; gap: 10px; }
 .results .rr-box { display: flex; align-items: center; gap: 7px; padding: 4px 10px 4px 6px; border-radius: 8px; border: 2px solid var(--c); background: var(--panel); min-width: 66px; }
 .results .rr-box.t1 { --c: var(--t1); } .results .rr-box.t2 { --c: var(--t2); } .results .rr-box.t3 { --c: var(--t3); }

@@ -52,7 +52,13 @@ lines.push('')
 const groupsOf = {}
 for (const t of TEAMS) (groupsOf[t.group] ||= []).push(t)
 const GROUPS = 'ABCDEFGHIJKL'.split('')
-lines.push('-- group-stage round-robin skeleton (72 matches), scores entered by admin')
+lines.push('-- group-stage round-robin skeleton (72 matches), scores entered by admin.')
+lines.push('-- kickoff times follow the canonical 3-matchday schedule so the results feed')
+lines.push('-- sorts chronologically. Re-seed updates kickoff only (never clobbers scores).')
+// Canonical matchday + slot for each pair (i<j) of the 4 group teams (by rank):
+//   MD1: 0v3, 1v2   MD2: 0v2, 1v3   MD3: 0v1, 2v3   → [matchday(0..2), slot(0..1)]
+const SCHED = { '0-1': [2, 0], '0-2': [1, 0], '0-3': [0, 0], '1-2': [0, 1], '1-3': [1, 1], '2-3': [2, 1] }
+const pad = (x) => String(x).padStart(2, '0')
 for (const g of GROUPS) {
   const gt = (groupsOf[g] || []).sort((a, b) => (a.rank || 99) - (b.rank || 99))
   let n = 0
@@ -60,10 +66,12 @@ for (const g of GROUPS) {
     for (let j = i + 1; j < gt.length; j++) {
       n++
       const id = `G-${g}-${n}`
+      const [md, slot] = SCHED[`${i}-${j}`]
+      const kickoff = `2026-06-${pad(11 + md)}T${pad(15 + slot * 3)}:00:00Z`
       lines.push(
-        `INSERT INTO matches (id,stage,grp,home_team_id,away_team_id,status) VALUES (` +
-        `${sqlStr(id)},'group',${sqlStr(g)},${sqlStr(gt[i].id)},${sqlStr(gt[j].id)},'scheduled') ` +
-        `ON CONFLICT(id) DO NOTHING;`
+        `INSERT INTO matches (id,stage,grp,home_team_id,away_team_id,kickoff,status) VALUES (` +
+        `${sqlStr(id)},'group',${sqlStr(g)},${sqlStr(gt[i].id)},${sqlStr(gt[j].id)},${sqlStr(kickoff)},'scheduled') ` +
+        `ON CONFLICT(id) DO UPDATE SET kickoff=excluded.kickoff;`
       )
     }
 }
