@@ -290,6 +290,7 @@ export function ResultsView({ view, homeHref }: { view: LeagueView; homeHref?: R
 
       <DayStrip days={days} owners={owners} />
 
+      <div className="sec-head"><h2>Standings</h2><span className="sec-sub">managers ranked by total points</span></div>
       <section><StandingsLeaderboard view={view} /></section>
 
       <div className="sec-head"><h2>Match results</h2><span className="sec-sub"><b>R</b> result · <b>G</b> goals · <b>B</b> upset bonus · total</span></div>
