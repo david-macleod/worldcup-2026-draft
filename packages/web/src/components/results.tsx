@@ -2,12 +2,16 @@
 // league view (matches/teams/picks). Shows the leaderboard + the group-stage
 // results feed (per-match tier-based scoring breakdown). Group tables and the
 // knockout bracket are intentionally not shown.
-import { useMemo, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import type { LeagueView, Team } from '../lib/api'
 import { Flag } from './ui'
 
 const clsx = (...a: unknown[]) => a.filter(Boolean).join(' ')
 const tierOf = (idx: number) => Math.min(3, Math.floor(idx / 2) + 1)
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+type Owners = Record<string, { name: string; color: string; tier: number }>
 
 // Per-match scoring — identical to the API's matchScore (services/scoring.ts).
 // tier/oppTier: 1 (best)..3 (worst), or null if undrafted.
@@ -23,15 +27,92 @@ function matchScore(gf: number, ga: number, tier: number | null, oppTier: number
 }
 
 // teamId -> { managerName, color, tier } from the draft
-function buildOwners(view: LeagueView) {
+function buildOwners(view: LeagueView): Owners {
   const mgr = Object.fromEntries(view.managers.map((m) => [m.id, m]))
   const n = view.league.nManagers
-  const owners: Record<string, { name: string; color: string; tier: number }> = {}
+  const owners: Owners = {}
   for (const p of view.picks) {
     const m = mgr[p.managerId]
     if (m) owners[p.teamId] = { name: m.name, color: m.color, tier: tierOf(Math.floor(p.overall / n)) }
   }
   return owners
+}
+
+// ── "Today's matches" day strip — a day runs 11:00→11:00 UTC so late-night
+// kickoffs group with the prior day. Navigable prev/next. ──────────────────
+interface Day { key: string; label: string; startMs: number; endMs: number; matches: FeedMatch[] }
+function buildDays(view: LeagueView): Day[] {
+  const teamById = Object.fromEntries(view.teams.map((t) => [t.id, t]))
+  const byKey: Record<string, FeedMatch[]> = {}
+  for (const m of view.matches) {
+    const a = teamById[m.home_team_id!], b = teamById[m.away_team_id!]
+    if (!a || !b || !m.kickoff) continue
+    const ms = Date.parse(m.kickoff)
+    if (isNaN(ms)) continue
+    const played = m.status === 'finished' && m.home_goals != null && m.away_goals != null
+    const key = new Date(ms - 11 * 3600_000).toISOString().slice(0, 10)
+    ;(byKey[key] ||= []).push({ a, b, ga: played ? m.home_goals : null, gb: played ? m.away_goals : null, played, kickoff: m.kickoff })
+  }
+  return Object.keys(byKey).sort().map((key) => {
+    const startMs = Date.parse(`${key}T11:00:00Z`)
+    const matches = byKey[key].sort((x, y) => (x.kickoff || '').localeCompare(y.kickoff || ''))
+    const d = new Date(`${key}T12:00:00Z`)
+    return { key, label: `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`, startMs, endMs: startMs + 86_400_000, matches }
+  })
+}
+
+function DayStrip({ days, owners }: { days: Day[]; owners: Owners }) {
+  const [idx, setIdx] = useState(() => {
+    const now = Date.now()
+    const i = days.findIndex((d) => d.endMs > now)
+    return i === -1 ? Math.max(0, days.length - 1) : i
+  })
+  if (!days.length) return null
+  const i = Math.max(0, Math.min(idx, days.length - 1))
+  const day = days[i]
+  return (
+    <section className="daystrip">
+      <div className="ds-head">
+        <button className="ds-nav" disabled={i <= 0} onClick={() => setIdx(i - 1)}>‹ Prev</button>
+        <div className="ds-title">{day.label}<span className="ds-count">{day.matches.length} match{day.matches.length === 1 ? '' : 'es'}</span></div>
+        <button className="ds-nav" disabled={i >= days.length - 1} onClick={() => setIdx(i + 1)}>Next ›</button>
+      </div>
+      <div className="ds-matches">
+        {day.matches.map((m, k) => <MatchCard key={k} m={m} owners={owners} />)}
+      </div>
+    </section>
+  )
+}
+
+// ── Tier reference — every drafted team grouped by tier, banded in tier colour ──
+function tiersOf(view: LeagueView): Record<number, Team[]> {
+  const n = view.league.nManagers
+  const teamById = Object.fromEntries(view.teams.map((t) => [t.id, t]))
+  const byTier: Record<number, Team[]> = { 1: [], 2: [], 3: [] }
+  for (const p of [...view.picks].sort((a, b) => a.overall - b.overall)) {
+    const t = teamById[p.teamId]
+    if (t) byTier[tierOf(Math.floor(p.overall / n))].push(t)
+  }
+  return byTier
+}
+function TiersPanel({ view }: { view: LeagueView }) {
+  const byTier = useMemo(() => tiersOf(view), [view])
+  if (!view.picks.length) return null
+  return (
+    <div className="tiers-panel">
+      <b className="foot-h">Tiers</b>
+      {[1, 2, 3].map((tier) => (
+        <div className={clsx('tier-band', `t${tier}`)} key={tier}>
+          <span className="tier-label">Tier {tier}</span>
+          <div className="tier-teams">
+            {byTier[tier].map((t) => (
+              <span className="tier-team" key={t.id} title={t.name}><Flag code={t.code} name={t.name} />{t.abbr}</span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 interface FeedMatch { a: Team; b: Team; ga: number | null; gb: number | null; played: boolean; kickoff: string | null }
@@ -148,9 +229,29 @@ function ResultRow({ team, gf, ga, owner, oppTier, win, played = true }: {
   )
 }
 
+// One match card — two stacked rows (home + away). Shared by the results feed and
+// the day strip (which lays these out side by side). Pending = greyed, no R/G/B/total.
+function MatchCard({ m, owners }: { m: FeedMatch; owners: Owners }) {
+  if (!m.played) {
+    return (
+      <div className="gr-match pending">
+        <ResultRow team={m.a} gf={0} ga={0} owner={owners[m.a.id]} oppTier={null} win={false} played={false} />
+        <ResultRow team={m.b} gf={0} ga={0} owner={owners[m.b.id]} oppTier={null} win={false} played={false} />
+      </div>
+    )
+  }
+  const aTier = owners[m.a.id]?.tier ?? null
+  const bTier = owners[m.b.id]?.tier ?? null
+  return (
+    <div className="gr-match">
+      <ResultRow team={m.a} gf={m.ga!} ga={m.gb!} owner={owners[m.a.id]} oppTier={bTier} win={m.ga! > m.gb!} />
+      <ResultRow team={m.b} gf={m.gb!} ga={m.ga!} owner={owners[m.b.id]} oppTier={aTier} win={m.gb! > m.ga!} />
+    </div>
+  )
+}
+
 function GroupResultsFeed({ groups, owners }: {
-  groups: Array<{ group: string; matches: FeedMatch[] }>
-  owners: Record<string, { name: string; color: string; tier: number }>
+  groups: Array<{ group: string; matches: FeedMatch[] }>; owners: Owners
 }) {
   if (!groups.length) return <p className="empty">No results entered yet — they'll appear here as games are played.</p>
   return (
@@ -159,24 +260,7 @@ function GroupResultsFeed({ groups, owners }: {
         <div className="gr-grp" key={gr.group}>
           <div className="gr-h">Group <b>{gr.group}</b></div>
           <div className="gr-matches">
-            {gr.matches.map((m, i) => {
-              if (!m.played) {
-                return (
-                  <div className="gr-match pending" key={i}>
-                    <ResultRow team={m.a} gf={0} ga={0} owner={owners[m.a.id]} oppTier={null} win={false} played={false} />
-                    <ResultRow team={m.b} gf={0} ga={0} owner={owners[m.b.id]} oppTier={null} win={false} played={false} />
-                  </div>
-                )
-              }
-              const aTier = owners[m.a.id]?.tier ?? null
-              const bTier = owners[m.b.id]?.tier ?? null
-              return (
-                <div className="gr-match" key={i}>
-                  <ResultRow team={m.a} gf={m.ga!} ga={m.gb!} owner={owners[m.a.id]} oppTier={bTier} win={m.ga! > m.gb!} />
-                  <ResultRow team={m.b} gf={m.gb!} ga={m.ga!} owner={owners[m.b.id]} oppTier={aTier} win={m.gb! > m.ga!} />
-                </div>
-              )
-            })}
+            {gr.matches.map((m, i) => <MatchCard key={i} m={m} owners={owners} />)}
           </div>
         </div>
       ))}
@@ -187,6 +271,7 @@ function GroupResultsFeed({ groups, owners }: {
 export function ResultsView({ view, homeHref }: { view: LeagueView; homeHref?: ReactNode }) {
   const groups = useMemo(() => groupResultsFeed(view), [view])
   const owners = useMemo(() => buildOwners(view), [view])
+  const days = useMemo(() => buildDays(view), [view])
   const finished = view.matches.filter((m) => m.status === 'finished').length
   const MODE: Record<string, string> = { sequential: 'Live snake draft', autodraft: 'Autodraft', imported: 'Imported draft' }
 
@@ -203,11 +288,14 @@ export function ResultsView({ view, homeHref }: { view: LeagueView; homeHref?: R
         {homeHref}
       </div>
 
+      <DayStrip days={days} owners={owners} />
+
       <section><StandingsLeaderboard view={view} /></section>
 
       <div className="sec-head"><h2>Match results</h2><span className="sec-sub"><b>R</b> result · <b>G</b> goals · <b>B</b> upset bonus · total</span></div>
       <GroupResultsFeed groups={groups} owners={owners} />
 
+      <div className="legend-row">
       <div className="foot">
         <b className="foot-h">How points work</b>
         <ul>
@@ -222,6 +310,8 @@ export function ResultsView({ view, homeHref }: { view: LeagueView; homeHref?: R
           </li>
           <li>Standings update live as real scorelines are entered.</li>
         </ul>
+      </div>
+      <TiersPanel view={view} />
       </div>
     </div>
   )
