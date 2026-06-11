@@ -53,6 +53,10 @@ export interface LeagueView {
   leaderboard: LeaderboardEntry[]
   perTeamPoints: Record<string, TeamPoints>
 }
+export interface FixturesView {
+  teams: Team[]
+  matches: Match[]
+}
 export interface ManagerView extends LeagueView {
   me: { id: string; name: string; seat: number | null; color: string }
   onClock: boolean
