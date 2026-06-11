@@ -6,6 +6,7 @@ import {
 } from '@tanstack/react-router'
 import './styles/app.css'
 import './styles/draft.css'
+import './styles/results.css'
 import { Home } from './routes/Home'
 import { Admin } from './routes/Admin'
 import { PublicLeague } from './routes/PublicLeague'
