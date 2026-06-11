@@ -75,13 +75,10 @@
 .results .gr-h b { color: var(--text); font-size: 15px; }
 .results .gr-matches { display: flex; flex-direction: column; gap: 8px; }
 .results .gr-match { display: flex; flex-direction: column; gap: 5px; background: var(--panel-2); border: 1px solid var(--hairline); border-radius: 10px; padding: 8px; }
-/* not played yet — grey background + greyer text */
+/* not played yet — same row format, grey background + slightly greyer text */
 .results .gr-match.pending { background: #191d1c; border-color: rgba(255,255,255,.06); }
-.results .pm { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.results .pm-team { display: flex; align-items: center; gap: 7px; color: var(--muted); font-family: var(--mono); font-weight: 700; font-size: 13px; min-width: 0; }
-.results .pm-team.end { justify-content: flex-end; }
-.results .pm-team .flag { opacity: .5; filter: grayscale(.55); }
-.results .pm-v { font-family: var(--mono); font-size: 10.5px; color: var(--muted); opacity: .7; white-space: nowrap; flex: 0 0 auto; }
+.results .gr-match.pending .rr-abbr,
+.results .gr-match.pending .rr-owner { color: var(--muted); }
 .results .rr { display: flex; align-items: center; gap: 10px; }
 .results .rr-box { display: flex; align-items: center; gap: 7px; padding: 4px 10px 4px 6px; border-radius: 8px; border: 2px solid var(--c); background: var(--panel); min-width: 66px; }
 .results .rr-box.t1 { --c: var(--t1); } .results .rr-box.t2 { --c: var(--t2); } .results .rr-box.t3 { --c: var(--t3); }
@@ -154,4 +151,8 @@
 .results .ko-champ-name { font-weight: 900; font-size: 16px; text-align: center; letter-spacing: -.01em; }
 
 .results .board-wrap { background: var(--panel); border: 1px solid var(--hairline); border-radius: 12px; padding: 12px; overflow-x: auto; }
-.results .foot { margin-top: 40px; font-family: var(--mono); font-size: 11px; color: var(--muted); line-height: 1.6; border-top: 1px solid var(--hairline); padding-top: 18px; }
+.results .foot { margin-top: 40px; font-family: var(--mono); font-size: 11.5px; color: var(--muted); line-height: 1.55; border-top: 1px solid var(--hairline); padding-top: 18px; }
+.results .foot-h { display: block; color: var(--text); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 8px; }
+.results .foot ul { margin: 0; padding-left: 18px; }
+.results .foot li { margin: 4px 0; }
+.results .foot b { color: var(--text); }

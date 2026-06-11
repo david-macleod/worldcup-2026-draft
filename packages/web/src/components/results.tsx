@@ -34,14 +34,6 @@ function buildOwners(view: LeagueView) {
   return owners
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-function fmtKickoff(iso: string | null): string {
-  if (!iso) return 'TBC'
-  const d = new Date(iso)
-  if (isNaN(d.getTime())) return 'TBC'
-  return `${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]} · ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}`
-}
-
 interface FeedMatch { a: Team; b: Team; ga: number | null; gb: number | null; played: boolean; kickoff: string | null }
 function groupResultsFeed(view: LeagueView): Array<{ group: string; matches: FeedMatch[] }> {
   const teamById = Object.fromEntries(view.teams.map((t) => [t.id, t]))
@@ -113,11 +105,23 @@ function StandingsLeaderboard({ view }: { view: LeagueView }) {
   )
 }
 
-function ResultRow({ team, gf, ga, owner, oppTier, win }: {
-  team: Team; gf: number; ga: number; owner?: { name: string; tier: number }; oppTier: number | null; win: boolean
+function ResultRow({ team, gf, ga, owner, oppTier, win, played = true }: {
+  team: Team; gf: number; ga: number; owner?: { name: string; tier: number }; oppTier: number | null; win: boolean; played?: boolean
 }) {
-  const s = matchScore(gf, ga, owner?.tier ?? null, oppTier)
   const o = owner || { name: '—', tier: 1 }
+  // Not played yet: same row format (flag, tier border, owner) minus score + R/G/B + total.
+  if (!played) {
+    return (
+      <div className="rr">
+        <div className={clsx('rr-box', `t${o.tier}`)}>
+          <Flag code={team.code} name={team.name} />
+          <span className="rr-abbr">{team.abbr}</span>
+        </div>
+        <span className="rr-owner">{o.name}</span>
+      </div>
+    )
+  }
+  const s = matchScore(gf, ga, owner?.tier ?? null, oppTier)
   return (
     <div className={clsx('rr', win && 'win')}>
       <div className={clsx('rr-box', `t${o.tier}`)}>
@@ -159,11 +163,8 @@ function GroupResultsFeed({ groups, owners }: {
               if (!m.played) {
                 return (
                   <div className="gr-match pending" key={i}>
-                    <div className="pm">
-                      <span className="pm-team"><Flag code={m.a.code} name={m.a.name} /><b>{m.a.abbr}</b></span>
-                      <span className="pm-v">{fmtKickoff(m.kickoff)}</span>
-                      <span className="pm-team end"><b>{m.b.abbr}</b><Flag code={m.b.code} name={m.b.name} /></span>
-                    </div>
+                    <ResultRow team={m.a} gf={0} ga={0} owner={owners[m.a.id]} oppTier={null} win={false} played={false} />
+                    <ResultRow team={m.b} gf={0} ga={0} owner={owners[m.b.id]} oppTier={null} win={false} played={false} />
                   </div>
                 )
               }
@@ -208,9 +209,19 @@ export function ResultsView({ view, homeHref }: { view: LeagueView; homeHref?: R
       <GroupResultsFeed groups={groups} owners={owners} />
 
       <div className="foot">
-        Points = win 3 / draw 1 / loss 0, +1 per goal. Upset bonus when a lower-tier team avoids
-        defeat against a higher tier: +1/+2 (one/two tiers above) plus +1/+2 per goal. Tiers come
-        from the draft round (picks 1–2 / 3–4 / 5–6). Standings update live as real scorelines are entered.
+        <b className="foot-h">How points work</b>
+        <ul>
+          <li>Win <b>3</b> · Draw <b>1</b> · Loss <b>0</b></li>
+          <li><b>+1</b> for every goal scored</li>
+          <li><b>Tiers</b> are set by draft round — picks 1–2 = tier 1, 3–4 = tier 2, 5–6 = tier 3</li>
+          <li><b>Upset bonus</b>, only if the team avoids defeat against a higher tier:
+            <ul>
+              <li><b>+1</b> for a win/draw vs one tier above · <b>+2</b> vs two tiers above</li>
+              <li><b>+1</b> per goal scored vs one tier above · <b>+2</b> per goal vs two above</li>
+            </ul>
+          </li>
+          <li>Standings update live as real scorelines are entered.</li>
+        </ul>
       </div>
     </div>
   )
