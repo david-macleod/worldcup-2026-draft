@@ -54,6 +54,7 @@
 .results .lb-row { display: grid; grid-template-columns: 22px 80px 56px 1fr; align-items: center; column-gap: 12px;
   background: var(--panel); border: 1px solid var(--hairline); border-left: 3px solid var(--clk); border-radius: 12px; padding: 8px 16px; }
 .results .lb-row.leader { box-shadow: 0 0 0 1px var(--clk); }
+.results .lb-row.you { background: color-mix(in srgb, var(--clk) 9%, var(--panel)); }
 .results .lb-place { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--muted); }
 .results .lb-row.leader .lb-place { color: var(--gold); }
 .results .lb-name { font-weight: 800; font-size: 18px; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

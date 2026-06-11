@@ -134,7 +134,7 @@ function groupResultsFeed(view: LeagueView): Array<{ group: string; matches: Fee
   return Object.keys(byGroup).sort().map((g) => ({ group: g, matches: byGroup[g] }))
 }
 
-function StandingsLeaderboard({ view }: { view: LeagueView }) {
+function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight?: string }) {
   const teamById = useMemo(() => Object.fromEntries(view.teams.map((t) => [t.id, t])), [view.teams])
   const lb = view.leaderboard
   const top = lb[0]?.total || 1
@@ -154,9 +154,9 @@ function StandingsLeaderboard({ view }: { view: LeagueView }) {
           const holding = segs.filter((s) => s.total <= 0)
           const barPct = (row.total / top) * 100
           return (
-            <div className={clsx('lb-row', i === 0 && 'leader')} key={row.managerId} style={{ ['--clk' as string]: row.color }}>
+            <div className={clsx('lb-row', i === 0 && 'leader', row.managerId === highlight && 'you')} key={row.managerId} style={{ ['--clk' as string]: row.color }}>
               <span className="lb-place">{i + 1}</span>
-              <span className="lb-name">{row.name}</span>
+              <span className="lb-name">{row.name}{row.managerId === highlight ? ' · you' : ''}</span>
               <div className="lb-pts"><b>{row.total}</b><span>PTS</span></div>
               <div className="lb-track">
                 <div className="lb-bar" style={{ flex: `0 1 ${barPct}%` }}>
@@ -268,12 +268,11 @@ function GroupResultsFeed({ groups, owners }: {
   )
 }
 
-export function ResultsView({ view, homeHref }: { view: LeagueView; homeHref?: ReactNode }) {
+export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; homeHref?: ReactNode; highlight?: string }) {
   const groups = useMemo(() => groupResultsFeed(view), [view])
   const owners = useMemo(() => buildOwners(view), [view])
   const days = useMemo(() => buildDays(view), [view])
   const finished = view.matches.filter((m) => m.status === 'finished').length
-  const MODE: Record<string, string> = { sequential: 'Live snake draft', autodraft: 'Autodraft', imported: 'Imported draft' }
 
   return (
     <div className="results">
@@ -282,7 +281,6 @@ export function ResultsView({ view, homeHref }: { view: LeagueView; homeHref?: R
         <div className="hero-txt">
           <div className="hero-kick">Competition standings</div>
           <h1 className="hero-h1">{view.league.name}</h1>
-          <div className="hero-sub">{MODE[view.league.mode]} · {view.league.nManagers} managers · {finished} results in</div>
         </div>
         {finished > 0 && <span className="hero-live">LIVE</span>}
         {homeHref}
@@ -291,7 +289,7 @@ export function ResultsView({ view, homeHref }: { view: LeagueView; homeHref?: R
       <DayStrip days={days} owners={owners} />
 
       <div className="sec-head"><h2>Standings</h2><span className="sec-sub">managers ranked by total points</span></div>
-      <section><StandingsLeaderboard view={view} /></section>
+      <section><StandingsLeaderboard view={view} highlight={highlight} /></section>
 
       <div className="sec-head"><h2>Match results</h2><span className="sec-sub"><b>R</b> result · <b>G</b> goals · <b>B</b> upset bonus · total</span></div>
       <GroupResultsFeed groups={groups} owners={owners} />

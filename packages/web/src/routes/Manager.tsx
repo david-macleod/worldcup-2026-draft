@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { apiFetch, type ManagerView } from '../lib/api'
-import { Board, Leaderboard, Flag, teamMap } from '../components/ui'
+import { Board, Flag, teamMap } from '../components/ui'
 import { DraftRoom } from '../components/draftroom'
+import { ResultsView } from '../components/results'
 
 export function Manager({ leagueId, token }: { leagueId: string; token: string }) {
   const qc = useQueryClient()
@@ -34,6 +35,13 @@ export function Manager({ leagueId, token }: { leagueId: string; token: string }
     )
   }
 
+  // Draft complete → managers see the same rich standings as the public page, with
+  // their own row highlighted.
+  if (v.league.status === 'complete') {
+    return <ResultsView view={v} highlight={v.me.id} homeHref={<span className="hero-link">you are {v.me.name}</span>} />
+  }
+
+  // Otherwise (autodraft setup/drafting, or sequential pre-start): wishlist + board.
   return (
     <div className="wrap">
       <div className="topbar">
@@ -44,15 +52,8 @@ export function Manager({ leagueId, token }: { leagueId: string; token: string }
         <div className="crumbs"><Link to="/l/$leagueId" params={{ leagueId }}>public standings</Link></div>
       </div>
 
-      {v.league.status !== 'complete' && v.league.mode === 'autodraft' && (
+      {v.league.mode === 'autodraft' && (
         <WishlistEditor view={v} leagueId={leagueId} token={token} onSaved={refresh} />
-      )}
-
-      {v.league.status === 'complete' && (
-        <div className="panel">
-          <h2>Final standings</h2>
-          <Leaderboard entries={v.leaderboard} teams={v.teams} highlight={v.me.id} />
-        </div>
       )}
 
       <div className="panel">
