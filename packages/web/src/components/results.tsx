@@ -291,9 +291,6 @@ export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; h
       <div className="sec-head"><h2>Standings</h2><span className="sec-sub">managers ranked by total points</span></div>
       <section><StandingsLeaderboard view={view} highlight={highlight} /></section>
 
-      <div className="sec-head"><h2>Match results</h2><span className="sec-sub"><b>R</b> result · <b>G</b> goals · <b>B</b> upset bonus · total</span></div>
-      <GroupResultsFeed groups={groups} owners={owners} />
-
       <div className="legend-row">
       <div className="foot">
         <b className="foot-h">How points work</b>
@@ -312,6 +309,9 @@ export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; h
       </div>
       <TiersPanel view={view} />
       </div>
+
+      <div className="sec-head"><h2>Match results</h2><span className="sec-sub"><b>R</b> result · <b>G</b> goals · <b>B</b> upset bonus · total</span></div>
+      <GroupResultsFeed groups={groups} owners={owners} />
     </div>
   )
 }
