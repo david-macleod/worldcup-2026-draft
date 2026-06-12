@@ -51,7 +51,7 @@
 
 /* leaderboard */
 .results .lb-grid { display: flex; flex-direction: column; gap: 9px; }
-.results .lb-row { display: grid; grid-template-columns: 22px 80px 56px 1fr; align-items: center; column-gap: 12px;
+.results .lb-row { display: grid; grid-template-columns: 22px 80px 56px 1fr auto; align-items: center; column-gap: 12px;
   background: var(--panel); border: 1px solid var(--hairline); border-radius: 12px; padding: 8px 16px; }
 .results .lb-row.leader { border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6; }
 .results .lb-row.you { background: color-mix(in srgb, var(--clk) 9%, var(--panel)); }
@@ -77,12 +77,20 @@
 .results .lb-seg-n { font-family: var(--mono); font-size: 12px; font-weight: 700; color: #0a0d12; }
 .results .lb-hold { display: flex; align-items: center; gap: 5px; padding-left: 10px; border-left: 1px dashed var(--hairline-2); align-self: stretch; }
 /* matches-played — subtle, far right, beside the remaining teams */
-.results .lb-mp { margin-left: auto; align-self: center; display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); color: var(--muted); flex: 0 0 auto; padding-left: 10px; }
+.results .lb-mp { align-self: center; display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); color: var(--muted); flex: 0 0 auto; padding-left: 10px; }
 .results .lb-mp b { font-size: 13px; font-weight: 700; color: var(--muted); }
 .results .lb-mp-lbl { display: flex; flex-direction: column; line-height: 1.05; }
 .results .lb-mp-lbl i { font-style: normal; font-size: 7px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; opacity: .85; }
 .results .lb-hold-fl { display: inline-flex; opacity: .4; filter: grayscale(.6); }
-@media (max-width: 760px) { .results .lb-row { grid-template-columns: 20px 1fr 56px; row-gap: 8px; } .results .lb-track { grid-column: 1 / -1; } }
+@media (max-width: 760px) {
+  /* matches-played moves up beside the name; the points/teams bar goes full width */
+  .results .lb-row { grid-template-columns: 20px auto auto 1fr; row-gap: 8px; }
+  .results .lb-place { grid-column: 1; grid-row: 1; }
+  .results .lb-name { grid-column: 2; grid-row: 1; }
+  .results .lb-mp { grid-column: 3; grid-row: 1; padding-left: 0; }
+  .results .lb-pts { grid-column: 4; grid-row: 1; justify-self: end; text-align: right; }
+  .results .lb-track { grid-column: 1 / -1; grid-row: 2; }
+}
 
 /* group-stage results feed */
 .results .gr-groups { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
