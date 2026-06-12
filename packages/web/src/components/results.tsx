@@ -2,7 +2,8 @@
 // league view (matches/teams/picks). Shows the leaderboard + the group-stage
 // results feed (per-match tier-based scoring breakdown). Group tables and the
 // knockout bracket are intentionally not shown.
-import { useMemo, useState, type ReactNode } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
+import type React from 'react'
 import { Link } from '@tanstack/react-router'
 import type { LeagueView, Team } from '../lib/api'
 import { Flag } from './ui'
@@ -37,67 +38,6 @@ function buildOwners(view: LeagueView): Owners {
     if (m) owners[p.teamId] = { name: m.name, color: m.color, tier: tierOf(Math.floor(p.overall / n)) }
   }
   return owners
-}
-
-// ── Fixtures — yesterday / today / tomorrow. Buckets by the viewer's *local*
-// calendar day so "Today" always matches the local date (a fixed UTC boundary
-// rolled over at local noon, showing yesterday's games all morning). ─────────
-const dayKey = (ms: number) => {
-  const d = new Date(ms)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-function labelForKey(key: string) {
-  const d = new Date(`${key}T12:00:00`)
-  return `${WEEKDAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`
-}
-
-interface Day { key: string; label: string; matches: FeedMatch[] }
-function buildDays(view: LeagueView): Day[] {
-  const teamById = Object.fromEntries(view.teams.map((t) => [t.id, t]))
-  const byKey: Record<string, FeedMatch[]> = {}
-  for (const m of view.matches) {
-    const a = teamById[m.home_team_id!], b = teamById[m.away_team_id!]
-    if (!a || !b || !m.kickoff) continue
-    const ms = Date.parse(m.kickoff)
-    if (isNaN(ms)) continue
-    const played = m.status === 'finished' && m.home_goals != null && m.away_goals != null
-    ;(byKey[dayKey(ms)] ||= []).push({ a, b, ga: played ? m.home_goals : null, gb: played ? m.away_goals : null, played, kickoff: m.kickoff })
-  }
-  return Object.keys(byKey).sort().map((key) => ({
-    key, label: labelForKey(key),
-    matches: byKey[key].sort((x, y) => (x.kickoff || '').localeCompare(y.kickoff || '')),
-  }))
-}
-
-// Yesterday / today / tomorrow relative to now — empty days still render so the
-// three-slot rhythm is preserved.
-function FixturesView({ days, owners }: { days: Day[]; owners: Owners }) {
-  const byKey = useMemo(() => Object.fromEntries(days.map((d) => [d.key, d])), [days])
-  const now = Date.now()
-  const slots = [
-    { rel: 'Yesterday', key: dayKey(now - 86_400_000) },
-    { rel: 'Today', key: dayKey(now) },
-    { rel: 'Tomorrow', key: dayKey(now + 86_400_000) },
-  ]
-  return (
-    <div className="fx-days">
-      {slots.map(({ rel, key }) => {
-        const matches = byKey[key]?.matches ?? []
-        return (
-          <section className="fx-day" key={rel}>
-            <div className="fx-day-head">
-              <span className="fx-rel">{rel}</span>
-              <span className="fx-date">{labelForKey(key)}</span>
-              <span className="fx-count">{matches.length} match{matches.length === 1 ? '' : 'es'}</span>
-            </div>
-            {matches.length === 0
-              ? <p className="empty">No matches scheduled.</p>
-              : <div className="fx-matches">{matches.map((m, k) => <MatchCard key={k} m={m} owners={owners} />)}</div>}
-          </section>
-        )
-      })}
-    </div>
-  )
 }
 
 // ── Tier reference — every drafted team grouped by tier, banded in tier colour ──
@@ -333,20 +273,39 @@ function buildCarouselDays(view: LeagueView): CDay[] {
 }
 
 function DayStrip({ days, owners }: { days: CDay[]; owners: Owners }) {
-  const [idx, setIdx] = useState(() => {
+  // index of the bucket containing "now" — used both as the default view and to
+  // label days relative to today (yesterday / today / tomorrow).
+  const todayIdx = useMemo(() => {
     const now = Date.now()
     const i = days.findIndex((d) => d.endMs > now)
     return i === -1 ? Math.max(0, days.length - 1) : i
-  })
+  }, [days])
+  const [idx, setIdx] = useState(todayIdx)
+  const touch = useRef<number | null>(null)
   if (!days.length) return null
   const i = Math.max(0, Math.min(idx, days.length - 1))
   const day = days[i]
+  const go = (next: number) => setIdx(Math.max(0, Math.min(next, days.length - 1)))
+  const rel = { [-1]: 'Yesterday', [0]: 'Today', [1]: 'Tomorrow' }[i - todayIdx]
+
+  // horizontal swipe on touch devices navigates between days
+  const onTouchStart = (e: React.TouchEvent) => { touch.current = e.touches[0].clientX }
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (touch.current == null) return
+    const dx = e.changedTouches[0].clientX - touch.current
+    touch.current = null
+    if (Math.abs(dx) > 45) go(dx < 0 ? i + 1 : i - 1)
+  }
+
   return (
-    <section className="daystrip">
+    <section className="daystrip" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <div className="ds-head">
-        <button className="ds-nav" disabled={i <= 0} onClick={() => setIdx(i - 1)}>‹ Prev</button>
-        <div className="ds-title">{day.label}<span className="ds-count">{day.matches.length} match{day.matches.length === 1 ? '' : 'es'}</span></div>
-        <button className="ds-nav" disabled={i >= days.length - 1} onClick={() => setIdx(i + 1)}>Next ›</button>
+        <button className="ds-nav" aria-label="Previous day" disabled={i <= 0} onClick={() => go(i - 1)}>‹<span className="ds-nav-lbl"> Prev</span></button>
+        <div className="ds-title">
+          <span className="ds-title-row">{rel && <span className="ds-rel">{rel}</span>}{day.label}</span>
+          <span className="ds-count">{day.matches.length} match{day.matches.length === 1 ? '' : 'es'}</span>
+        </div>
+        <button className="ds-nav" aria-label="Next day" disabled={i >= days.length - 1} onClick={() => go(i + 1)}><span className="ds-nav-lbl">Next </span>›</button>
       </div>
       <div className="ds-matches">
         {day.matches.map((m, k) => <MatchCard key={k} m={m} owners={owners} />)}
@@ -377,7 +336,7 @@ export function OverviewView({ view, highlight }: { view: LeagueView; highlight?
 export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; homeHref?: ReactNode; highlight?: string }) {
   const groups = useMemo(() => groupResultsFeed(view), [view])
   const owners = useMemo(() => buildOwners(view), [view])
-  const days = useMemo(() => buildDays(view), [view])
+  const days = useMemo(() => buildCarouselDays(view), [view])
   const [tab, setTab] = useState<TabId>('league')
 
   // Tabs are mobile-only (CSS-gated): on desktop every panel is shown stacked, on
@@ -403,8 +362,8 @@ export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; h
       </nav>
 
       <div className="tab-panel" data-panel="fixtures">
-        <div className="sec-head"><h2>Fixtures</h2><span className="sec-sub">yesterday · today · tomorrow</span></div>
-        <FixturesView days={days} owners={owners} />
+        <div className="sec-head"><h2>Fixtures</h2><span className="sec-sub">browse results day by day</span></div>
+        <DayStrip days={days} owners={owners} />
       </div>
 
       <div className="tab-panel" data-panel="league">
