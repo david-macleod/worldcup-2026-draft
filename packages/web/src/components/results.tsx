@@ -38,12 +38,16 @@ function buildOwners(view: LeagueView): Owners {
   return owners
 }
 
-// ── Fixtures — yesterday / today / tomorrow. A day runs 11:00→11:00 UTC so
-// late-night kickoffs group with the prior calendar day. ────────────────────
-const dayKey = (ms: number) => new Date(ms - 11 * 3600_000).toISOString().slice(0, 10)
+// ── Fixtures — yesterday / today / tomorrow. Buckets by the viewer's *local*
+// calendar day so "Today" always matches the local date (a fixed UTC boundary
+// rolled over at local noon, showing yesterday's games all morning). ─────────
+const dayKey = (ms: number) => {
+  const d = new Date(ms)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 function labelForKey(key: string) {
-  const d = new Date(`${key}T12:00:00Z`)
-  return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`
+  const d = new Date(`${key}T12:00:00`)
+  return `${WEEKDAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`
 }
 
 interface Day { key: string; label: string; matches: FeedMatch[] }
@@ -323,7 +327,7 @@ export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; h
       <nav className="tabs" role="tablist">
         {TABS.map((t) => (
           <button key={t.id} role="tab" aria-selected={tab === t.id}
-            className={clsx('tab', tab === t.id && 'active')} onClick={() => setTab(t.id)}>
+            className={clsx('tab', tab === t.id && 'on')} onClick={() => setTab(t.id)}>
             {t.label}
           </button>
         ))}

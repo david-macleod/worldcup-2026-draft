@@ -32,24 +32,17 @@
 @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
 .results .hero-link { font-family: var(--mono); font-size: 12px; color: var(--muted); text-decoration: none; border-bottom: 1px dotted var(--muted); }
 
-/* tabs — mobile only; desktop shows every panel stacked (tabs hidden) */
-.results .tabs { display: none; gap: 6px; margin: 4px 0 22px; border-bottom: 1px solid var(--hairline); }
-.results .tab { font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .04em; color: var(--muted);
-  background: none; padding: 11px 16px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; }
-.results .tab:hover { color: var(--text); }
-.results .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+/* tabs — mobile only; desktop shows every panel stacked (tabs hidden).
+   Pill style is shared with /fixtures (see .tabs/.tab/.tab.on in app.css). */
+.results .tabs { display: none; }
 @media (max-width: 760px) {
-  .results .tabs { display: flex; }
+  .results .tabs { display: inline-flex; }
   .results .tab-panel { display: none; }
   .results[data-tab="league"] [data-panel="league"],
   .results[data-tab="fixtures"] [data-panel="fixtures"],
   .results[data-tab="results"] [data-panel="results"] { display: block; }
   /* first visible panel sits right under the tab bar — trim its leading gap */
   .results .tab-panel > .sec-head:first-child { margin-top: 18px; }
-}
-@media (max-width: 560px) {
-  .results .tabs { gap: 0; }
-  .results .tab { flex: 1; text-align: center; padding: 12px 4px; }
 }
 
 /* fixtures — yesterday / today / tomorrow */
