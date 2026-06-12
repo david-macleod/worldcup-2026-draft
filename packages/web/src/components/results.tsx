@@ -307,8 +307,10 @@ export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; h
   const days = useMemo(() => buildDays(view), [view])
   const [tab, setTab] = useState<TabId>('league')
 
+  // Tabs are mobile-only (CSS-gated): on desktop every panel is shown stacked, on
+  // mobile the tab bar appears and `data-tab` toggles which panel is visible.
   return (
-    <div className="results">
+    <div className="results" data-tab={tab}>
       <div className="hero">
         <span className="hero-globe">🌍</span>
         <div className="hero-txt">
@@ -327,45 +329,39 @@ export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; h
         ))}
       </nav>
 
-      {tab === 'league' && (
-        <>
-          <div className="sec-head"><h2>Standings</h2><span className="sec-sub">managers ranked by total points</span></div>
-          <section><StandingsLeaderboard view={view} highlight={highlight} /></section>
+      <div className="tab-panel" data-panel="fixtures">
+        <div className="sec-head"><h2>Fixtures</h2><span className="sec-sub">yesterday · today · tomorrow</span></div>
+        <FixturesView days={days} owners={owners} />
+      </div>
 
-          <div className="legend-row">
-            <div className="foot">
-              <b className="foot-h">How points work</b>
-              <ul>
-                <li>Win <b>3</b> · Draw <b>1</b> · Loss <b>0</b></li>
-                <li><b>+1</b> for every goal scored</li>
-                <li><b>Tiers</b> are set by draft round — picks 1–2 = tier 1, 3–4 = tier 2, 5–6 = tier 3</li>
-                <li><b>Upset bonus</b>, only if the team avoids defeat against a higher tier:
-                  <ul>
-                    <li><b>+1</b> for a win/draw vs one tier above · <b>+2</b> vs two tiers above</li>
-                    <li><b>+1</b> per goal scored vs one tier above · <b>+2</b> per goal vs two above</li>
-                  </ul>
-                </li>
-                <li>Standings update live as real scorelines are entered.</li>
-              </ul>
-            </div>
-            <TiersPanel view={view} />
+      <div className="tab-panel" data-panel="league">
+        <div className="sec-head"><h2>Standings</h2><span className="sec-sub">managers ranked by total points</span></div>
+        <section><StandingsLeaderboard view={view} highlight={highlight} /></section>
+
+        <div className="legend-row">
+          <div className="foot">
+            <b className="foot-h">How points work</b>
+            <ul>
+              <li>Win <b>3</b> · Draw <b>1</b> · Loss <b>0</b></li>
+              <li><b>+1</b> for every goal scored</li>
+              <li><b>Tiers</b> are set by draft round — picks 1–2 = tier 1, 3–4 = tier 2, 5–6 = tier 3</li>
+              <li><b>Upset bonus</b>, only if the team avoids defeat against a higher tier:
+                <ul>
+                  <li><b>+1</b> for a win/draw vs one tier above · <b>+2</b> vs two tiers above</li>
+                  <li><b>+1</b> per goal scored vs one tier above · <b>+2</b> per goal vs two above</li>
+                </ul>
+              </li>
+              <li>Standings update live as real scorelines are entered.</li>
+            </ul>
           </div>
-        </>
-      )}
+          <TiersPanel view={view} />
+        </div>
+      </div>
 
-      {tab === 'fixtures' && (
-        <>
-          <div className="sec-head"><h2>Fixtures</h2><span className="sec-sub">yesterday · today · tomorrow</span></div>
-          <FixturesView days={days} owners={owners} />
-        </>
-      )}
-
-      {tab === 'results' && (
-        <>
-          <div className="sec-head"><h2>Match results</h2><span className="sec-sub"><b>R</b> result · <b>G</b> goals · <b>B</b> upset bonus · total</span></div>
-          <GroupResultsFeed groups={groups} owners={owners} />
-        </>
-      )}
+      <div className="tab-panel" data-panel="results">
+        <div className="sec-head"><h2>Match results</h2><span className="sec-sub"><b>R</b> result · <b>G</b> goals · <b>B</b> upset bonus · total</span></div>
+        <GroupResultsFeed groups={groups} owners={owners} />
+      </div>
     </div>
   )
 }
