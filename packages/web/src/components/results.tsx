@@ -148,6 +148,7 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
   }, [view.matches])
   const lb = view.leaderboard
   const top = lb[0]?.total || 1
+  const topTotal = lb[0]?.total || 0
   const allZero = lb.every((r) => r.total === 0)
   return (
     <>
@@ -165,7 +166,7 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
           const barPct = (row.total / top) * 100
           const played = row.squad.reduce((s, x) => s + (playedByTeam[x.teamId] || 0), 0)
           return (
-            <div className={clsx('lb-row', i === 0 && 'leader', row.managerId === highlight && 'you')} key={row.managerId} style={{ ['--clk' as string]: row.color }}>
+            <div className={clsx('lb-row', topTotal > 0 && row.total === topTotal && 'leader', row.managerId === highlight && 'you')} key={row.managerId} style={{ ['--clk' as string]: row.color }}>
               <span className="lb-place">{i + 1}</span>
               <span className="lb-name">{row.name}{row.managerId === highlight ? ' · you' : ''}</span>
               <div className="lb-pts"><b>{row.total}</b><span>PTS</span></div>
