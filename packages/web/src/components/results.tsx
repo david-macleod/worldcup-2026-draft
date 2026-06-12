@@ -136,6 +136,16 @@ function groupResultsFeed(view: LeagueView): Array<{ group: string; matches: Fee
 
 function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight?: string }) {
   const teamById = useMemo(() => Object.fromEntries(view.teams.map((t) => [t.id, t])), [view.teams])
+  // finished-match appearances per team (a team that has played twice counts 2)
+  const playedByTeam = useMemo(() => {
+    const c: Record<string, number> = {}
+    for (const m of view.matches) {
+      if (m.status !== 'finished') continue
+      if (m.home_team_id) c[m.home_team_id] = (c[m.home_team_id] || 0) + 1
+      if (m.away_team_id) c[m.away_team_id] = (c[m.away_team_id] || 0) + 1
+    }
+    return c
+  }, [view.matches])
   const lb = view.leaderboard
   const top = lb[0]?.total || 1
   const allZero = lb.every((r) => r.total === 0)
@@ -153,6 +163,7 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
           const scoring = segs.filter((s) => s.total > 0)
           const holding = segs.filter((s) => s.total <= 0)
           const barPct = (row.total / top) * 100
+          const played = row.squad.reduce((s, x) => s + (playedByTeam[x.teamId] || 0), 0)
           return (
             <div className={clsx('lb-row', i === 0 && 'leader', row.managerId === highlight && 'you')} key={row.managerId} style={{ ['--clk' as string]: row.color }}>
               <span className="lb-place">{i + 1}</span>
@@ -177,6 +188,7 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
                     ))}
                   </div>
                 )}
+                <span className="lb-mp" title={`${played} matches played by this squad`}><b>{played}</b><i>played</i></span>
               </div>
             </div>
           )
