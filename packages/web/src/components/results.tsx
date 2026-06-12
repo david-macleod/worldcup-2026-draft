@@ -329,11 +329,6 @@ export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; h
         ))}
       </nav>
 
-      <div className="tab-panel" data-panel="fixtures">
-        <div className="sec-head"><h2>Fixtures</h2><span className="sec-sub">yesterday · today · tomorrow</span></div>
-        <FixturesView days={days} owners={owners} />
-      </div>
-
       <div className="tab-panel" data-panel="league">
         <div className="sec-head"><h2>Standings</h2><span className="sec-sub">managers ranked by total points</span></div>
         <section><StandingsLeaderboard view={view} highlight={highlight} /></section>
@@ -356,6 +351,11 @@ export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; h
           </div>
           <TiersPanel view={view} />
         </div>
+      </div>
+
+      <div className="tab-panel" data-panel="fixtures">
+        <div className="sec-head"><h2>Fixtures</h2><span className="sec-sub">yesterday · today · tomorrow</span></div>
+        <FixturesView days={days} owners={owners} />
       </div>
 
       <div className="tab-panel" data-panel="results">
