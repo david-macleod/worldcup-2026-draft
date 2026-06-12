@@ -38,9 +38,15 @@ function buildOwners(view: LeagueView): Owners {
   return owners
 }
 
-// ── "Today's matches" day strip — a day runs 11:00→11:00 UTC so late-night
-// kickoffs group with the prior day. Navigable prev/next. ──────────────────
-interface Day { key: string; label: string; startMs: number; endMs: number; matches: FeedMatch[] }
+// ── Fixtures — yesterday / today / tomorrow. A day runs 11:00→11:00 UTC so
+// late-night kickoffs group with the prior calendar day. ────────────────────
+const dayKey = (ms: number) => new Date(ms - 11 * 3600_000).toISOString().slice(0, 10)
+function labelForKey(key: string) {
+  const d = new Date(`${key}T12:00:00Z`)
+  return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`
+}
+
+interface Day { key: string; label: string; matches: FeedMatch[] }
 function buildDays(view: LeagueView): Day[] {
   const teamById = Object.fromEntries(view.teams.map((t) => [t.id, t]))
   const byKey: Record<string, FeedMatch[]> = {}
@@ -50,37 +56,42 @@ function buildDays(view: LeagueView): Day[] {
     const ms = Date.parse(m.kickoff)
     if (isNaN(ms)) continue
     const played = m.status === 'finished' && m.home_goals != null && m.away_goals != null
-    const key = new Date(ms - 11 * 3600_000).toISOString().slice(0, 10)
-    ;(byKey[key] ||= []).push({ a, b, ga: played ? m.home_goals : null, gb: played ? m.away_goals : null, played, kickoff: m.kickoff })
+    ;(byKey[dayKey(ms)] ||= []).push({ a, b, ga: played ? m.home_goals : null, gb: played ? m.away_goals : null, played, kickoff: m.kickoff })
   }
-  return Object.keys(byKey).sort().map((key) => {
-    const startMs = Date.parse(`${key}T11:00:00Z`)
-    const matches = byKey[key].sort((x, y) => (x.kickoff || '').localeCompare(y.kickoff || ''))
-    const d = new Date(`${key}T12:00:00Z`)
-    return { key, label: `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`, startMs, endMs: startMs + 86_400_000, matches }
-  })
+  return Object.keys(byKey).sort().map((key) => ({
+    key, label: labelForKey(key),
+    matches: byKey[key].sort((x, y) => (x.kickoff || '').localeCompare(y.kickoff || '')),
+  }))
 }
 
-function DayStrip({ days, owners }: { days: Day[]; owners: Owners }) {
-  const [idx, setIdx] = useState(() => {
-    const now = Date.now()
-    const i = days.findIndex((d) => d.endMs > now)
-    return i === -1 ? Math.max(0, days.length - 1) : i
-  })
-  if (!days.length) return null
-  const i = Math.max(0, Math.min(idx, days.length - 1))
-  const day = days[i]
+// Yesterday / today / tomorrow relative to now — empty days still render so the
+// three-slot rhythm is preserved.
+function FixturesView({ days, owners }: { days: Day[]; owners: Owners }) {
+  const byKey = useMemo(() => Object.fromEntries(days.map((d) => [d.key, d])), [days])
+  const now = Date.now()
+  const slots = [
+    { rel: 'Yesterday', key: dayKey(now - 86_400_000) },
+    { rel: 'Today', key: dayKey(now) },
+    { rel: 'Tomorrow', key: dayKey(now + 86_400_000) },
+  ]
   return (
-    <section className="daystrip">
-      <div className="ds-head">
-        <button className="ds-nav" disabled={i <= 0} onClick={() => setIdx(i - 1)}>‹ Prev</button>
-        <div className="ds-title">{day.label}<span className="ds-count">{day.matches.length} match{day.matches.length === 1 ? '' : 'es'}</span></div>
-        <button className="ds-nav" disabled={i >= days.length - 1} onClick={() => setIdx(i + 1)}>Next ›</button>
-      </div>
-      <div className="ds-matches">
-        {day.matches.map((m, k) => <MatchCard key={k} m={m} owners={owners} />)}
-      </div>
-    </section>
+    <div className="fx-days">
+      {slots.map(({ rel, key }) => {
+        const matches = byKey[key]?.matches ?? []
+        return (
+          <section className="fx-day" key={rel}>
+            <div className="fx-day-head">
+              <span className="fx-rel">{rel}</span>
+              <span className="fx-date">{labelForKey(key)}</span>
+              <span className="fx-count">{matches.length} match{matches.length === 1 ? '' : 'es'}</span>
+            </div>
+            {matches.length === 0
+              ? <p className="empty">No matches scheduled.</p>
+              : <div className="fx-matches">{matches.map((m, k) => <MatchCard key={k} m={m} owners={owners} />)}</div>}
+          </section>
+        )
+      })}
+    </div>
   )
 }
 
@@ -283,11 +294,18 @@ function GroupResultsFeed({ groups, owners }: {
   )
 }
 
+const TABS = [
+  { id: 'league', label: 'League' },
+  { id: 'fixtures', label: 'Fixtures' },
+  { id: 'results', label: 'Results' },
+] as const
+type TabId = (typeof TABS)[number]['id']
+
 export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; homeHref?: ReactNode; highlight?: string }) {
   const groups = useMemo(() => groupResultsFeed(view), [view])
   const owners = useMemo(() => buildOwners(view), [view])
   const days = useMemo(() => buildDays(view), [view])
-  const finished = view.matches.filter((m) => m.status === 'finished').length
+  const [tab, setTab] = useState<TabId>('league')
 
   return (
     <div className="results">
@@ -297,36 +315,57 @@ export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; h
           <div className="hero-kick">Competition standings</div>
           <h1 className="hero-h1">{view.league.name}</h1>
         </div>
-        {finished > 0 && <span className="hero-live">LIVE</span>}
         {homeHref}
       </div>
 
-      <DayStrip days={days} owners={owners} />
+      <nav className="tabs" role="tablist">
+        {TABS.map((t) => (
+          <button key={t.id} role="tab" aria-selected={tab === t.id}
+            className={clsx('tab', tab === t.id && 'active')} onClick={() => setTab(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </nav>
 
-      <div className="sec-head"><h2>Standings</h2><span className="sec-sub">managers ranked by total points</span></div>
-      <section><StandingsLeaderboard view={view} highlight={highlight} /></section>
+      {tab === 'league' && (
+        <>
+          <div className="sec-head"><h2>Standings</h2><span className="sec-sub">managers ranked by total points</span></div>
+          <section><StandingsLeaderboard view={view} highlight={highlight} /></section>
 
-      <div className="legend-row">
-      <div className="foot">
-        <b className="foot-h">How points work</b>
-        <ul>
-          <li>Win <b>3</b> · Draw <b>1</b> · Loss <b>0</b></li>
-          <li><b>+1</b> for every goal scored</li>
-          <li><b>Tiers</b> are set by draft round — picks 1–2 = tier 1, 3–4 = tier 2, 5–6 = tier 3</li>
-          <li><b>Upset bonus</b>, only if the team avoids defeat against a higher tier:
-            <ul>
-              <li><b>+1</b> for a win/draw vs one tier above · <b>+2</b> vs two tiers above</li>
-              <li><b>+1</b> per goal scored vs one tier above · <b>+2</b> per goal vs two above</li>
-            </ul>
-          </li>
-          <li>Standings update live as real scorelines are entered.</li>
-        </ul>
-      </div>
-      <TiersPanel view={view} />
-      </div>
+          <div className="legend-row">
+            <div className="foot">
+              <b className="foot-h">How points work</b>
+              <ul>
+                <li>Win <b>3</b> · Draw <b>1</b> · Loss <b>0</b></li>
+                <li><b>+1</b> for every goal scored</li>
+                <li><b>Tiers</b> are set by draft round — picks 1–2 = tier 1, 3–4 = tier 2, 5–6 = tier 3</li>
+                <li><b>Upset bonus</b>, only if the team avoids defeat against a higher tier:
+                  <ul>
+                    <li><b>+1</b> for a win/draw vs one tier above · <b>+2</b> vs two tiers above</li>
+                    <li><b>+1</b> per goal scored vs one tier above · <b>+2</b> per goal vs two above</li>
+                  </ul>
+                </li>
+                <li>Standings update live as real scorelines are entered.</li>
+              </ul>
+            </div>
+            <TiersPanel view={view} />
+          </div>
+        </>
+      )}
 
-      <div className="sec-head"><h2>Match results</h2><span className="sec-sub"><b>R</b> result · <b>G</b> goals · <b>B</b> upset bonus · total</span></div>
-      <GroupResultsFeed groups={groups} owners={owners} />
+      {tab === 'fixtures' && (
+        <>
+          <div className="sec-head"><h2>Fixtures</h2><span className="sec-sub">yesterday · today · tomorrow</span></div>
+          <FixturesView days={days} owners={owners} />
+        </>
+      )}
+
+      {tab === 'results' && (
+        <>
+          <div className="sec-head"><h2>Match results</h2><span className="sec-sub"><b>R</b> result · <b>G</b> goals · <b>B</b> upset bonus · total</span></div>
+          <GroupResultsFeed groups={groups} owners={owners} />
+        </>
+      )}
     </div>
   )
 }
