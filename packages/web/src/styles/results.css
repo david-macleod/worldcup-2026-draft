@@ -4,7 +4,7 @@
 .results {
   --mono: 'JetBrains Mono', ui-monospace, monospace;
   --ui: 'Archivo', system-ui, sans-serif;
-  --accent: #2bd47d; --gold: #f5c451;
+  --accent: #2bd47d; --gold: #f5c451; --flag-w: 22px;
   --t1: #2bd47d; --t2: #f5953d; --t3: #d8394c;
   --bg: #081e15; --panel: #0e2a1f; --panel-2: #133527; --chip: #19402f;
   --hairline: rgba(255,255,255,.10); --hairline-2: rgba(255,255,255,.18);
@@ -14,7 +14,7 @@
 }
 .results * { box-sizing: border-box; }
 
-.results .flag { width: 22px; height: 15px; border-radius: 3px; object-fit: cover;
+.results .flag { width: var(--flag-w); height: 15px; border-radius: 3px; object-fit: cover;
   box-shadow: 0 0 0 1px var(--hairline); background: var(--chip); flex: 0 0 auto; display: inline-block; }
 .results .flag.md { width: 26px; height: 18px; }
 .results .flag.champ { width: 48px; height: 32px; border-radius: 6px; }
@@ -91,13 +91,18 @@
 .results .lb-legend .held::before { box-shadow: inset 0 0 0 1px var(--hairline-2); }
 .results .lb-track { display: flex; align-items: flex-end; gap: 12px; min-height: 46px; min-width: 0; }
 .results .lb-bar { display: flex; align-items: flex-end; gap: 2px; min-width: 0; }
-.results .lb-seg { flex-basis: 0; min-width: 22px; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.results .lb-seg { flex-basis: 0; min-width: var(--flag-w); display: flex; flex-direction: column; align-items: center; gap: 5px; }
 .results .lb-seg-block { width: 100%; height: 22px; border-radius: 5px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .results .lb-seg.t1 .lb-seg-block { background: var(--t1); }
 .results .lb-seg.t2 .lb-seg-block { background: var(--t2); }
 .results .lb-seg.t3 .lb-seg-block { background: var(--t3); }
 .results .lb-seg-n { font-family: var(--mono); font-size: 12px; font-weight: 700; color: #0a0d12; }
-.results .lb-hold { display: flex; align-items: center; gap: 5px; padding-left: 10px; border-left: 1px dashed var(--hairline-2); align-self: stretch; }
+/* "yet to score" cluster: fixed-width region (set by the manager with the most
+   remaining flags) so the dashed divider lines up across rows; flags right-aligned. */
+.results .lb-hold { flex: 0 0 auto; box-sizing: content-box; align-self: center; margin-left: auto;
+  display: flex; flex-wrap: wrap; justify-content: flex-end; align-content: center; gap: 5px;
+  padding-left: 10px; border-left: 1px dashed var(--hairline-2);
+  width: calc(var(--hcols-d, 6) * var(--flag-w) + (var(--hcols-d, 6) - 1) * 5px); }
 /* matches-played — subtle, far right, beside the remaining teams */
 .results .lb-mp { align-self: center; display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); color: var(--muted); flex: 0 0 auto; padding-left: 10px; }
 .results .lb-mp b { font-size: 13px; font-weight: 700; color: var(--muted); }
@@ -112,6 +117,8 @@
   .results .lb-mp { grid-column: 3; grid-row: 1; padding-left: 0; }
   .results .lb-pts { grid-column: 4; grid-row: 1; justify-self: end; text-align: right; }
   .results .lb-track { grid-column: 1 / -1; grid-row: 2; }
+  /* yet-to-score wraps to 2 rows (≤3 cols); reserved width snaps with the global max */
+  .results .lb-hold { width: calc(var(--hcols-m, 3) * var(--flag-w) + (var(--hcols-m, 3) - 1) * 5px); }
 }
 
 /* group-stage results feed */

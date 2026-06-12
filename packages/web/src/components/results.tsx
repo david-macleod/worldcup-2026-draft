@@ -166,6 +166,12 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
   const top = lb[0]?.total || 1
   const topTotal = lb[0]?.total || 0
   const allZero = lb.every((r) => r.total === 0)
+  // Reserve the "yet to score" cluster's width by the manager with the MOST remaining
+  // (0-pt) teams, so every row's dashed divider lines up. Desktop = one row; mobile
+  // wraps to 2 rows (3 cols), snapping narrower as the global max drops.
+  const maxHold = Math.max(0, ...lb.map((r) => r.squad.filter((x) => (x.points?.total ?? 0) <= 0).length))
+  const holdColsD = Math.max(1, maxHold)
+  const holdColsM = Math.min(3, Math.max(1, Math.ceil(maxHold / 2)))
   return (
     <>
       <div className="lb-legend">
@@ -173,7 +179,7 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
         <span className="lg t3">Tier 3</span><span className="lg held">Yet to score</span>
       </div>
       {allZero && <p className="empty">No results entered yet — the table fills in as the commissioner enters scorelines.</p>}
-      <div className="lb-grid">
+      <div className="lb-grid" style={{ ['--hcols-d' as string]: holdColsD, ['--hcols-m' as string]: holdColsM }}>
         {lb.map((row, i) => {
           const segs = row.squad.map((x, idx) => ({ team: teamById[x.teamId], total: x.points.total, tier: tierOf(idx), round: idx + 1 }))
             .filter((s) => s.team)
