@@ -3,6 +3,7 @@
 // results feed (per-match tier-based scoring breakdown). Group tables and the
 // knockout bracket are intentionally not shown.
 import { useMemo, useState, type ReactNode } from 'react'
+import { Link } from '@tanstack/react-router'
 import type { LeagueView, Team } from '../lib/api'
 import { Flag } from './ui'
 
@@ -305,6 +306,74 @@ const TABS = [
 ] as const
 type TabId = (typeof TABS)[number]['id']
 
+// ── Overview page — the original prev/next carousel (11:00→11:00 UTC day buckets,
+// so late kickoffs group with the prior day) + the standings below. Screenshot view. ──
+interface CDay { key: string; label: string; startMs: number; endMs: number; matches: FeedMatch[] }
+function buildCarouselDays(view: LeagueView): CDay[] {
+  const teamById = Object.fromEntries(view.teams.map((t) => [t.id, t]))
+  const byKey: Record<string, FeedMatch[]> = {}
+  for (const m of view.matches) {
+    const a = teamById[m.home_team_id!], b = teamById[m.away_team_id!]
+    if (!a || !b || !m.kickoff) continue
+    const ms = Date.parse(m.kickoff)
+    if (isNaN(ms)) continue
+    const played = m.status === 'finished' && m.home_goals != null && m.away_goals != null
+    const key = new Date(ms - 11 * 3600_000).toISOString().slice(0, 10)
+    ;(byKey[key] ||= []).push({ a, b, ga: played ? m.home_goals : null, gb: played ? m.away_goals : null, played, kickoff: m.kickoff })
+  }
+  return Object.keys(byKey).sort().map((key) => {
+    const startMs = Date.parse(`${key}T11:00:00Z`)
+    const d = new Date(`${key}T12:00:00Z`)
+    return {
+      key, label: `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`,
+      startMs, endMs: startMs + 86_400_000,
+      matches: byKey[key].sort((x, y) => (x.kickoff || '').localeCompare(y.kickoff || '')),
+    }
+  })
+}
+
+function DayStrip({ days, owners }: { days: CDay[]; owners: Owners }) {
+  const [idx, setIdx] = useState(() => {
+    const now = Date.now()
+    const i = days.findIndex((d) => d.endMs > now)
+    return i === -1 ? Math.max(0, days.length - 1) : i
+  })
+  if (!days.length) return null
+  const i = Math.max(0, Math.min(idx, days.length - 1))
+  const day = days[i]
+  return (
+    <section className="daystrip">
+      <div className="ds-head">
+        <button className="ds-nav" disabled={i <= 0} onClick={() => setIdx(i - 1)}>‹ Prev</button>
+        <div className="ds-title">{day.label}<span className="ds-count">{day.matches.length} match{day.matches.length === 1 ? '' : 'es'}</span></div>
+        <button className="ds-nav" disabled={i >= days.length - 1} onClick={() => setIdx(i + 1)}>Next ›</button>
+      </div>
+      <div className="ds-matches">
+        {day.matches.map((m, k) => <MatchCard key={k} m={m} owners={owners} />)}
+      </div>
+    </section>
+  )
+}
+
+export function OverviewView({ view, highlight }: { view: LeagueView; highlight?: string }) {
+  const owners = useMemo(() => buildOwners(view), [view])
+  const days = useMemo(() => buildCarouselDays(view), [view])
+  return (
+    <div className="results">
+      <div className="hero">
+        <Link to="/l/$leagueId" params={{ leagueId: view.league.id }} className="hero-globe" title="Back to standings">🌍</Link>
+        <div className="hero-txt">
+          <div className="hero-kick">Overview</div>
+          <h1 className="hero-h1">{view.league.name}</h1>
+        </div>
+      </div>
+      <DayStrip days={days} owners={owners} />
+      <div className="sec-head"><h2>Standings</h2><span className="sec-sub">managers ranked by total points</span></div>
+      <section><StandingsLeaderboard view={view} highlight={highlight} /></section>
+    </div>
+  )
+}
+
 export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; homeHref?: ReactNode; highlight?: string }) {
   const groups = useMemo(() => groupResultsFeed(view), [view])
   const owners = useMemo(() => buildOwners(view), [view])
@@ -316,7 +385,7 @@ export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; h
   return (
     <div className="results" data-tab={tab}>
       <div className="hero">
-        <span className="hero-globe">🌍</span>
+        <Link to="/l/$leagueId/overview" params={{ leagueId: view.league.id }} className="hero-globe" title="Open overview">🌍</Link>
         <div className="hero-txt">
           <div className="hero-kick">Competition standings</div>
           <h1 className="hero-h1">{view.league.name}</h1>

@@ -12,6 +12,7 @@ import { Admin } from './routes/Admin'
 import { PublicLeague } from './routes/PublicLeague'
 import { Manager } from './routes/Manager'
 import { Fixtures } from './routes/Fixtures'
+import { Overview } from './routes/Overview'
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> })
 
@@ -25,6 +26,15 @@ const leagueRoute = createRoute({
   component: function LeagueRoute() {
     const { leagueId } = useParams({ from: '/l/$leagueId' })
     return <PublicLeague leagueId={leagueId} />
+  },
+})
+
+const overviewRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/l/$leagueId/overview',
+  component: function OverviewRoute() {
+    const { leagueId } = useParams({ from: '/l/$leagueId/overview' })
+    return <Overview leagueId={leagueId} />
   },
 })
 
@@ -48,7 +58,7 @@ const managerNamedRoute = createRoute({
   },
 })
 
-const routeTree = rootRoute.addChildren([indexRoute, adminRoute, fixturesRoute, leagueRoute, managerRoute, managerNamedRoute])
+const routeTree = rootRoute.addChildren([indexRoute, adminRoute, fixturesRoute, leagueRoute, overviewRoute, managerRoute, managerNamedRoute])
 const router = createRouter({ routeTree })
 
 declare module '@tanstack/react-router' {
