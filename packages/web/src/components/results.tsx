@@ -153,8 +153,8 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
   return (
     <>
       <div className="lb-legend">
-        <span className="lg t1">Tier 1 · Picks 1–2</span><span className="lg t2">Tier 2 · Picks 3–4</span>
-        <span className="lg t3">Tier 3 · Picks 5–6</span><span className="lg held">Yet to score</span>
+        <span className="lg t1">Tier 1</span><span className="lg t2">Tier 2</span>
+        <span className="lg t3">Tier 3</span><span className="lg held">Yet to score</span>
       </div>
       {allZero && <p className="empty">No results entered yet — the table fills in as the commissioner enters scorelines.</p>}
       <div className="lb-grid">
