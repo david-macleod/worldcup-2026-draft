@@ -78,9 +78,9 @@
 .results .lb-hold { display: flex; align-items: center; gap: 5px; padding-left: 10px; border-left: 1px dashed var(--hairline-2); align-self: stretch; }
 /* matches-played — subtle, far right, beside the remaining teams */
 .results .lb-mp { margin-left: auto; align-self: center; display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); color: var(--muted); flex: 0 0 auto; padding-left: 10px; }
-.results .lb-mp b { font-size: 15px; font-weight: 700; color: var(--muted); }
+.results .lb-mp b { font-size: 13px; font-weight: 700; color: var(--muted); }
 .results .lb-mp-lbl { display: flex; flex-direction: column; line-height: 1.05; }
-.results .lb-mp-lbl i { font-style: normal; font-size: 8px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; opacity: .85; }
+.results .lb-mp-lbl i { font-style: normal; font-size: 7px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; opacity: .85; }
 .results .lb-hold-fl { display: inline-flex; opacity: .4; filter: grayscale(.6); }
 @media (max-width: 760px) { .results .lb-row { grid-template-columns: 20px 1fr 56px; row-gap: 8px; } .results .lb-track { grid-column: 1 / -1; } }
 
