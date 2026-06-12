@@ -221,3 +221,50 @@
 .results .tier-teams { flex: 1; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px 8px; }
 .results .tier-team { display: inline-flex; align-items: center; gap: 4px; font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--muted); }
 .results .tier-team .flag { width: 18px; height: 12px; }
+
+/* ───────────────────────── animations ─────────────────────────
+   Entrance + live-update motion. Entrance runs once on mount (nodes are keyed
+   stably, so the 8s poll re-render never replays them); the carousel's match
+   list is keyed by day, so it re-animates only when you change day. All gated
+   behind prefers-reduced-motion. */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes pop  { from { opacity: 0; transform: scale(.82); } to { opacity: 1; transform: none; } }
+  /* distortion-free reveal: clips the bar in left→right (flags/numbers don't scale) */
+  @keyframes wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+
+  .results .hero { animation: rise .5s ease both; }
+  .results .lb-legend { animation: fade .5s ease .05s both; }
+
+  /* leaderboard: rows fade up (staggered), then each points bar wipes in */
+  .results .lb-row { animation: rise .45s cubic-bezier(.2,.7,.3,1) both; animation-delay: calc(var(--row, 0) * 55ms + .08s); }
+  .results .lb-bar { animation: wipe .6s ease both; animation-delay: calc(var(--row, 0) * 55ms + .28s);
+    transition: flex-basis .7s cubic-bezier(.4,0,.2,1); }
+  .results .lb-seg { transition: flex-grow .7s cubic-bezier(.4,0,.2,1); }
+  .results .lb-hold { animation: fade .5s ease both; animation-delay: calc(var(--row, 0) * 55ms + .4s); }
+  .results .lb-pts b { animation: pop .4s ease both; animation-delay: calc(var(--row, 0) * 55ms + .22s); }
+
+  /* tabs: the toggled panel eases in (display none→block restarts the animation) */
+  .results .tab-panel { animation: fade .35s ease both; }
+
+  /* day carousel: list re-keys on nav → soft rise; cards stagger; rel pill pops */
+  .results .ds-matches { animation: rise .35s ease both; }
+  .results .ds-matches > .gr-match { animation: rise .4s ease both; }
+  .results .ds-matches > .gr-match:nth-child(2) { animation-delay: .05s; }
+  .results .ds-matches > .gr-match:nth-child(3) { animation-delay: .1s; }
+  .results .ds-matches > .gr-match:nth-child(n+4) { animation-delay: .15s; }
+  .results .ds-rel { animation: pop .3s ease both; }
+
+  /* results feed + tier reference cards rise in */
+  .results .gr-grp { animation: rise .45s ease both; }
+  .results .tier-band { animation: rise .4s ease both; }
+}
+
+/* hover micro-interactions — transform-only so the leader/you ring is untouched */
+.results .lb-row { transition: transform .15s ease; }
+.results .lb-row:hover { transform: translateY(-2px); }
+.results .gr-match { transition: transform .15s ease, border-color .15s ease; }
+.results .gr-match:not(.pending):hover { transform: translateY(-1px); border-color: var(--hairline-2); }
+.results .ds-nav { transition: background .15s ease, transform .1s ease; }
+.results .ds-nav:active:not(:disabled) { transform: scale(.92); }

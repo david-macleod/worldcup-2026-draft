@@ -122,7 +122,7 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
           const barPct = (row.total / top) * 100
           const played = row.squad.reduce((s, x) => s + (playedByTeam[x.teamId] || 0), 0)
           return (
-            <div className={clsx('lb-row', topTotal > 0 && row.total === topTotal && 'leader', row.managerId === highlight && 'you')} key={row.managerId} style={{ ['--clk' as string]: row.color }}>
+            <div className={clsx('lb-row', topTotal > 0 && row.total === topTotal && 'leader', row.managerId === highlight && 'you')} key={row.managerId} style={{ ['--clk' as string]: row.color, ['--row' as string]: i }}>
               <span className="lb-place">{i + 1}</span>
               <span className="lb-name">{row.name}{row.managerId === highlight ? ' · you' : ''}</span>
               <div className="lb-pts"><b>{row.total}</b><span>PTS</span></div>
@@ -307,7 +307,7 @@ function DayStrip({ days, owners }: { days: CDay[]; owners: Owners }) {
         </div>
         <button className="ds-nav" aria-label="Next day" disabled={i >= days.length - 1} onClick={() => go(i + 1)}><span className="ds-nav-lbl">Next </span>›</button>
       </div>
-      <div className="ds-matches">
+      <div className="ds-matches" key={day.key}>
         {day.matches.map((m, k) => <MatchCard key={k} m={m} owners={owners} />)}
       </div>
     </section>
