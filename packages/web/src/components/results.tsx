@@ -188,7 +188,9 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
                     ))}
                   </div>
                 )}
-                <span className="lb-mp" title={`${played} matches played by this squad`}><b>{played}</b><i>matches</i></span>
+                <span className="lb-mp" title={`${played} matches played by this squad`}>
+                  <b>{played}</b><span className="lb-mp-lbl"><i>matches</i><i>played</i></span>
+                </span>
               </div>
             </div>
           )
