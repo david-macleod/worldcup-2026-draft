@@ -133,17 +133,19 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
               <span className="lb-name">{row.name}{row.managerId === highlight ? ' · you' : ''}</span>
               <div className="lb-pts"><b>{row.total}</b><span>PTS</span></div>
               <div className="lb-track">
-                <div className="lb-bar" style={{ flex: `0 1 ${barPct}%` }}>
-                  {scoring.map((s) => (
-                    <div className={clsx('lb-seg', `t${s.tier}`)} key={s.team.id} style={{ flexGrow: s.total }}
-                      title={`${s.team.name} · ${s.total} pts · pick ${s.round}`}>
-                      <span className="lb-seg-flag"><Flag code={s.team.code} name={s.team.name} /></span>
-                      <span className="lb-seg-block"><span className="lb-seg-n">{s.total}</span></span>
-                    </div>
-                  ))}
+                <div className="lb-scoring">
+                  <div className="lb-bar" style={{ width: `${barPct}%` }}>
+                    {scoring.map((s) => (
+                      <div className={clsx('lb-seg', `t${s.tier}`)} key={s.team.id} style={{ flexGrow: s.total }}
+                        title={`${s.team.name} · ${s.total} pts · pick ${s.round}`}>
+                        <span className="lb-seg-flag"><Flag code={s.team.code} name={s.team.name} /></span>
+                        <span className="lb-seg-block"><span className="lb-seg-n">{s.total}</span></span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                {holding.length > 0 && (
-                  <div className="lb-hold">
+                {maxHold > 0 && (
+                  <div className={clsx('lb-hold', !holding.length && 'empty')}>
                     {holding.map((s) => (
                       <span className="lb-hold-fl" key={s.team.id} title={`${s.team.name} · 0 pts · pick ${s.round}`}>
                         <Flag code={s.team.code} name={s.team.name} />

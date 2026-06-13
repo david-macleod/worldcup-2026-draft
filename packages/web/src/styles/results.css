@@ -95,7 +95,10 @@
 .results .lb-legend .held { --c: var(--chip); }
 .results .lb-legend .held::before { box-shadow: inset 0 0 0 1px var(--hairline-2); }
 .results .lb-track { display: flex; align-items: flex-end; gap: 12px; min-height: 46px; min-width: 0; }
-.results .lb-bar { display: flex; align-items: flex-end; gap: 2px; min-width: 0; }
+/* scoring area = the space left of the reserved "yet to score" cluster; the bar is a
+   true % of THIS, so the leader fills it and everyone else is a real fraction. */
+.results .lb-scoring { flex: 1 1 0; min-width: 0; display: flex; align-items: flex-end; }
+.results .lb-bar { display: flex; align-items: flex-end; gap: 2px; min-width: 0; max-width: 100%; }
 /* segments are truly proportional to points (min-width 0). The flag drops out when
    a segment is too thin to fit it, then the number too — leaving just the bar. */
 .results .lb-seg { flex-basis: 0; min-width: 0; container-type: inline-size; display: flex; flex-direction: column; align-items: center; gap: 5px; }
@@ -112,6 +115,7 @@
   display: flex; flex-wrap: wrap; justify-content: flex-end; align-content: center; gap: 5px;
   padding-left: 10px; border-left: 1px dashed var(--hairline-2);
   width: calc(var(--hcols-d, 6) * var(--flag-w) + (var(--hcols-d, 6) - 1) * 5px); }
+.results .lb-hold.empty { border-left-color: transparent; }
 /* matches-played — subtle, far right, beside the remaining teams */
 .results .lb-mp { align-self: center; display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); color: var(--muted); flex: 0 0 auto; padding-left: 10px; }
 .results .lb-mp b { font-size: 13px; font-weight: 700; color: var(--muted); }
