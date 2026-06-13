@@ -96,8 +96,11 @@
 .results .lb-legend .held::before { box-shadow: inset 0 0 0 1px var(--hairline-2); }
 .results .lb-track { display: flex; align-items: flex-end; gap: 12px; min-height: 46px; min-width: 0; }
 .results .lb-bar { display: flex; align-items: flex-end; gap: 2px; min-width: 0; }
-/* segment min-width = 1.5× the flag above it on desktop (1.1× on mobile, below) */
-.results .lb-seg { flex-basis: 0; min-width: calc(var(--flag-w) * 1.5); display: flex; flex-direction: column; align-items: center; gap: 5px; }
+/* segments are truly proportional to points (min-width 0). The flag drops out when
+   a segment is too thin to fit it, then the number too — leaving just the bar. */
+.results .lb-seg { flex-basis: 0; min-width: 0; container-type: inline-size; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+@container (max-width: 23px) { .results .lb-seg-flag { display: none; } }
+@container (max-width: 15px) { .results .lb-seg-n { display: none; } }
 .results .lb-seg-block { width: 100%; height: 22px; border-radius: 5px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .results .lb-seg.t1 .lb-seg-block { background: var(--t1); }
 .results .lb-seg.t2 .lb-seg-block { background: var(--t2); }
@@ -125,8 +128,6 @@
   .results .lb-track { grid-column: 1 / -1; grid-row: 2; }
   /* yet-to-score wraps to 2 rows (≤3 cols); reserved width snaps with the global max */
   .results .lb-hold { width: calc(var(--hcols-m, 3) * var(--flag-w) + (var(--hcols-m, 3) - 1) * 5px); }
-  /* tighter bar segments on mobile — only 10% wider than the flag */
-  .results .lb-seg { min-width: calc(var(--flag-w) * 1.1); }
 }
 
 /* group-stage results feed */
