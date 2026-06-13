@@ -96,7 +96,8 @@
 .results .lb-legend .held::before { box-shadow: inset 0 0 0 1px var(--hairline-2); }
 .results .lb-track { display: flex; align-items: flex-end; gap: 12px; min-height: 46px; min-width: 0; }
 .results .lb-bar { display: flex; align-items: flex-end; gap: 2px; min-width: 0; }
-.results .lb-seg { flex-basis: 0; min-width: var(--flag-w); display: flex; flex-direction: column; align-items: center; gap: 5px; }
+/* segment min-width = 1.5× the flag above it (desktop + mobile) */
+.results .lb-seg { flex-basis: 0; min-width: calc(var(--flag-w) * 1.5); display: flex; flex-direction: column; align-items: center; gap: 5px; }
 .results .lb-seg-block { width: 100%; height: 22px; border-radius: 5px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
 .results .lb-seg.t1 .lb-seg-block { background: var(--t1); }
 .results .lb-seg.t2 .lb-seg-block { background: var(--t2); }
