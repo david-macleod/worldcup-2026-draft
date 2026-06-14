@@ -13,6 +13,13 @@ const tierOf = (idx: number) => Math.min(3, Math.floor(idx / 2) + 1)
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
+// Local kickoff time for the day-strip cards. Single-digit hours are zero-padded
+// (9:00 PM -> 09:00 PM) so times align in the carousel. Group kickoffs are full UTC instants.
+function fmtTime(iso: string): string {
+  const t = new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  return t.replace(/^(\d)\b/, '0$1')
+}
+
 type Owners = Record<string, { name: string; color: string; tier: number }>
 
 // Per-match scoring — identical to the API's matchScore (services/scoring.ts).
@@ -265,12 +272,17 @@ function ResultRow({ team, gf, ga, owner, oppTier, win, played = true }: {
 
 // One match card — two stacked rows (home + away). Shared by the results feed and
 // the day strip (which lays these out side by side). Pending = greyed, no R/G/B/total.
-function MatchCard({ m, owners }: { m: FeedMatch; owners: Owners }) {
+function MatchCard({ m, owners, showTime }: { m: FeedMatch; owners: Owners; showTime?: boolean }) {
   if (!m.played) {
+    // day-strip cards show the kickoff time for not-yet-played fixtures, set into the
+    // empty space to the right of the teams (no score occupies it yet)
     return (
       <div className="gr-match pending">
-        <ResultRow team={m.a} gf={0} ga={0} owner={owners[m.a.id]} oppTier={null} win={false} played={false} />
-        <ResultRow team={m.b} gf={0} ga={0} owner={owners[m.b.id]} oppTier={null} win={false} played={false} />
+        <div className="gr-rows">
+          <ResultRow team={m.a} gf={0} ga={0} owner={owners[m.a.id]} oppTier={null} win={false} played={false} />
+          <ResultRow team={m.b} gf={0} ga={0} owner={owners[m.b.id]} oppTier={null} win={false} played={false} />
+        </div>
+        {showTime && m.kickoff && <div className="gr-time">{fmtTime(m.kickoff)}</div>}
       </div>
     )
   }
@@ -308,6 +320,23 @@ const TABS = [
   { id: 'results', label: 'Results' },
 ] as const
 type TabId = (typeof TABS)[number]['id']
+
+// Line icons for the mobile tab bar: trophy (League), calendar (Fixtures),
+// clipboard-check (Results). Inherit the tab's text colour via currentColor.
+function TabIcon({ id }: { id: TabId }) {
+  const p = { viewBox: '0 0 24 24', width: 14, height: 14, fill: 'none', stroke: 'currentColor',
+    strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true }
+  if (id === 'league') return (
+    <svg {...p}><path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" /><path d="M8 6H5v1a3 3 0 0 0 3 3" />
+      <path d="M16 6h3v1a3 3 0 0 1-3 3" /><path d="M12 13v3M9.5 20h5M10.5 16h3" /></svg>
+  )
+  if (id === 'fixtures') return (
+    <svg {...p}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
+  )
+  return (
+    <svg {...p}><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9.5 4h5v2.5h-5z" /><path d="M8.5 13l2 2 4-4" /></svg>
+  )
+}
 
 // ── Overview page — the original prev/next carousel (11:00→11:00 UTC day buckets,
 // so late kickoffs group with the prior day) + the standings below. Screenshot view. ──
@@ -373,7 +402,7 @@ function DayStrip({ days, owners }: { days: CDay[]; owners: Owners }) {
         <button className="ds-nav" aria-label="Next day" disabled={i >= days.length - 1} onClick={() => go(i + 1)}><span className="ds-nav-lbl">Next </span>›</button>
       </div>
       <div className="ds-matches" key={day.key}>
-        {day.matches.map((m, k) => <MatchCard key={k} m={m} owners={owners} />)}
+        {day.matches.map((m, k) => <MatchCard key={k} m={m} owners={owners} showTime />)}
       </div>
     </section>
   )
@@ -420,13 +449,13 @@ export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; h
         {TABS.map((t) => (
           <button key={t.id} role="tab" aria-selected={tab === t.id}
             className={clsx('tab', tab === t.id && 'on')} onClick={() => setTab(t.id)}>
-            {t.label}
+            <TabIcon id={t.id} />{t.label}
           </button>
         ))}
       </nav>
 
       <div className="tab-panel" data-panel="fixtures">
-        <div className="sec-head"><h2>Fixtures</h2><span className="sec-sub">browse results day by day</span></div>
+        <div className="sec-head"><h2>Fixtures</h2></div>
         <DayStrip days={days} owners={owners} />
       </div>
 
