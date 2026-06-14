@@ -5,3 +5,4 @@ dist/
 packages/api/.dev.vars
 *.local
 .DS_Store
+.playwright-mcp/
