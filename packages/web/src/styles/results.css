@@ -134,7 +134,7 @@
 .results .lb-hold-fl { display: inline-flex; opacity: .4; filter: grayscale(.6); }
 /* expanded breakdown — teams ranked by points, with scored/bonus/total columns */
 .results .lb-breakdown { grid-column: 1 / -1; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--hairline); display: flex; flex-direction: column; gap: 4px; }
-.results .lb-bd-head, .results .lb-bd-row { display: grid; grid-template-columns: 1fr 40px 40px 40px 52px; align-items: center; column-gap: 10px; }
+.results .lb-bd-head, .results .lb-bd-row { display: grid; grid-template-columns: 1fr 36px 36px 36px 36px 52px; align-items: center; column-gap: 8px; }
 .results .lb-bd-head { font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 0 12px 2px; }
 .results .lb-bd-head .lb-bd-stat, .results .lb-bd-head .lb-bd-total { text-align: right; }
 .results .lb-bd-row { background: var(--panel-2); border-radius: 8px; padding: 7px 12px; border-left: 3px solid var(--c, var(--hairline)); }
