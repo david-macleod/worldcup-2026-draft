@@ -103,8 +103,9 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
     return c
   }, [view.matches])
   const lb = view.leaderboard
-  const top = lb[0]?.total || 1
-  const topTotal = lb[0]?.total || 0
+  const [byPpg, setByPpg] = useState(false)
+  // Bar scaling stays tied to the highest TOTAL points regardless of sort, so bars never change.
+  const top = Math.max(1, ...lb.map((r) => r.total))
   const allZero = lb.every((r) => r.total === 0)
   // Reserve the "yet to score" cluster's width by the manager with the MOST remaining
   // (0-pt) teams, so every row's dashed divider lines up. Desktop = one row; mobile
@@ -112,26 +113,43 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
   const maxHold = Math.max(0, ...lb.map((r) => r.squad.filter((x) => (x.points?.total ?? 0) <= 0).length))
   const holdColsD = Math.max(1, maxHold)
   const holdColsM = Math.min(3, Math.max(1, Math.ceil(maxHold / 2)))
+
+  // games played (squad match appearances) + points-per-game; resort by the active metric
+  const rows = lb.map((row) => {
+    const played = row.squad.reduce((s, x) => s + (playedByTeam[x.teamId] || 0), 0)
+    return { row, played, ppg: played > 0 ? row.total / played : 0 }
+  })
+  const sorted = byPpg
+    ? [...rows].sort((a, b) => b.ppg - a.ppg || b.row.total - a.row.total || a.row.name.localeCompare(b.row.name))
+    : rows
+  const topMetric = sorted.length ? (byPpg ? sorted[0].ppg : sorted[0].row.total) : 0
+
   return (
     <>
+      <div className="sec-head">
+        <h2>Standings</h2>
+        <button className="sec-toggle" onClick={() => setByPpg((v) => !v)}>
+          {byPpg ? 'Show total points' : 'Show points-per-game'}
+        </button>
+      </div>
       <div className="lb-legend">
         <span className="lg t1">Tier 1</span><span className="lg t2">Tier 2</span>
         <span className="lg t3">Tier 3</span><span className="lg held">Yet to score</span>
       </div>
       {allZero && <p className="empty">No results entered yet — the table fills in as the commissioner enters scorelines.</p>}
       <div className="lb-grid" style={{ ['--hcols-d' as string]: holdColsD, ['--hcols-m' as string]: holdColsM }}>
-        {lb.map((row, i) => {
+        {sorted.map(({ row, played, ppg }, i) => {
           const segs = row.squad.map((x, idx) => ({ team: teamById[x.teamId], total: x.points.total, tier: tierOf(idx), round: idx + 1 }))
             .filter((s) => s.team)
           const scoring = segs.filter((s) => s.total > 0)
           const holding = segs.filter((s) => s.total <= 0)
           const barPct = (row.total / top) * 100
-          const played = row.squad.reduce((s, x) => s + (playedByTeam[x.teamId] || 0), 0)
+          const isLeader = topMetric > 0 && (byPpg ? ppg === topMetric : row.total === topMetric)
           return (
-            <div className={clsx('lb-row', topTotal > 0 && row.total === topTotal && 'leader', row.managerId === highlight && 'you')} key={row.managerId} style={{ ['--clk' as string]: row.color, ['--row' as string]: i }}>
+            <div className={clsx('lb-row', isLeader && 'leader', row.managerId === highlight && 'you')} key={row.managerId} style={{ ['--clk' as string]: row.color, ['--row' as string]: i }}>
               <span className="lb-place">{i + 1}</span>
               <span className="lb-name">{row.name}{row.managerId === highlight ? ' · you' : ''}</span>
-              <div className="lb-pts"><b>{row.total}</b><span>PTS</span></div>
+              <div className="lb-pts"><b>{byPpg ? ppg.toFixed(2) : row.total}</b><span>{byPpg ? 'PPG' : 'PTS'}</span></div>
               <div className="lb-track">
                 <div className="lb-scoring">
                   <div className="lb-bar" style={{ width: `${barPct}%` }}>
@@ -335,7 +353,6 @@ export function OverviewView({ view, highlight }: { view: LeagueView; highlight?
         </div>
       </div>
       <DayStrip days={days} owners={owners} />
-      <div className="sec-head"><h2>Standings</h2><span className="sec-sub">managers ranked by total points</span></div>
       <section><StandingsLeaderboard view={view} highlight={highlight} /></section>
     </div>
   )
@@ -375,7 +392,6 @@ export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; h
       </div>
 
       <div className="tab-panel" data-panel="league">
-        <div className="sec-head"><h2>Standings</h2><span className="sec-sub">managers ranked by total points</span></div>
         <section><StandingsLeaderboard view={view} highlight={highlight} /></section>
 
         <div className="legend-row">
