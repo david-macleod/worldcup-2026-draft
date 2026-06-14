@@ -41,8 +41,9 @@
 .results .ds-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 11px; }
 .results .ds-title { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
 .results .ds-title-row { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 16px; letter-spacing: -.01em; }
-.results .ds-rel { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--on-accent); background: var(--accent); padding: 2px 7px; border-radius: 999px; }
-.results .ds-count { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: .04em; }
+.results .ds-rel { display: inline-block; font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--on-accent); background: var(--accent); padding: 2px 7px; border-radius: 999px; }
+/* empty badge slot still occupies its height so the header doesn't jump between days */
+.results .ds-rel.is-empty { visibility: hidden; }
 .results .ds-nav { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--text); background: var(--chip); padding: 7px 12px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--hairline); flex: 0 0 auto; }
 .results .ds-nav:hover:not(:disabled) { background: var(--panel-2); }
 .results .ds-nav:disabled { opacity: .3; cursor: not-allowed; }
