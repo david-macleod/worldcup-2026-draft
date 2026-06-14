@@ -4,13 +4,15 @@
 .results {
   --mono: 'JetBrains Mono', ui-monospace, monospace;
   --ui: 'Archivo', system-ui, sans-serif;
-  --accent: #2bd47d; --gold: #f5c451; --flag-w: 22px;
+  --accent: #2bd47d; --gold: #f5c451; --silver: #c8d2de; --bronze: #d08b4f; --flag-w: 22px;
   --t1: #2bd47d; --t2: #f5953d; --t3: #d8394c;
   --bg: #081e15; --panel: #0e2a1f; --panel-2: #133527; --chip: #19402f;
   --hairline: rgba(255,255,255,.10); --hairline-2: rgba(255,255,255,.18);
   --text: #eafff3; --muted: #84b29b; --on-accent: #06140d;
   font-family: var(--ui); color: var(--text);
   max-width: 1280px; margin: 0 auto; padding: 28px 24px 80px;
+  /* no grey/blue tap-highlight flash on mobile when tapping rows, tabs or nav (inherits) */
+  -webkit-tap-highlight-color: transparent;
 }
 .results * { box-sizing: border-box; }
 
@@ -84,23 +86,23 @@
 .results .lb-grid { display: flex; flex-direction: column; gap: 9px; }
 .results .lb-row { display: grid; grid-template-columns: 22px 80px 56px 1fr auto; align-items: center; column-gap: 12px;
   background: var(--panel); border: 1px solid var(--hairline); border-radius: 12px; padding: 8px 16px; cursor: pointer; }
-.results .lb-row.leader { border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6; }
+/* top three get medal outlines (gold/silver/bronze) on both the ring and place number */
+.results .lb-row.gold   { border-color: var(--gold);   box-shadow: 0 0 0 1px var(--gold); }
+.results .lb-row.silver { border-color: var(--silver); box-shadow: 0 0 0 1px var(--silver); }
+.results .lb-row.bronze { border-color: var(--bronze); box-shadow: 0 0 0 1px var(--bronze); }
 .results .lb-row.you { background: color-mix(in srgb, var(--clk) 9%, var(--panel)); }
 /* pin children to columns so collapsing the bar on expand doesn't reflow the header */
 .results .lb-place { grid-column: 1; font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--muted); }
-.results .lb-row.leader .lb-place { color: var(--gold); }
+.results .lb-row.gold   .lb-place { color: var(--gold); }
+.results .lb-row.silver .lb-place { color: var(--silver); }
+.results .lb-row.bronze .lb-place { color: var(--bronze); }
 .results .lb-name { grid-column: 2; font-weight: 800; font-size: 18px; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .results .lb-pts { grid-column: 3; }
 .results .lb-trk { grid-column: 4; }
 .results .lb-mp { grid-column: 5; }
-/* expand/collapse — silent (no caret): the bar collapses and the breakdown opens,
-   both via a grid-template-rows 0fr⇄1fr transition (animates in AND out). */
-.results .lb-trk { display: grid; grid-template-rows: 1fr; min-width: 0; transition: grid-template-rows .3s ease; }
-.results .lb-row.open .lb-trk { grid-template-rows: 0fr; }
-/* transition the min-height floor too, otherwise on close it snaps back to 46px
-   instantly and the bar pops in rather than folding down with the grid-rows transition */
-.results .lb-trk > .lb-track { overflow: hidden; transition: min-height .3s ease; }
-.results .lb-row.open .lb-trk > .lb-track { min-height: 0; }
+/* expand/collapse — silent (no caret): the per-team bar stays put; only the breakdown
+   table opens or collapses below it, via a grid-template-rows 0fr⇄1fr transition. */
+.results .lb-trk { min-width: 0; }
 .results .lb-bd { grid-column: 1 / -1; display: grid; grid-template-rows: 0fr; transition: grid-template-rows .3s ease; }
 .results .lb-row.open .lb-bd { grid-template-rows: 1fr; }
 .results .lb-bd > .lb-breakdown { overflow: hidden; min-height: 0; }
@@ -153,12 +155,11 @@
 .results .lb-bd-head .lb-bd-stat, .results .lb-bd-head .lb-bd-total { font-size: 9.5px; font-weight: 600; text-align: right; }
 .results .lb-bd-row { background: var(--panel-2); border-radius: 8px; padding: 7px 12px; border-left: 3px solid var(--c, var(--hairline)); }
 .results .lb-bd-row.t1 { --c: var(--t1); } .results .lb-bd-row.t2 { --c: var(--t2); } .results .lb-bd-row.t3 { --c: var(--t3); }
-.results .lb-bd-row.held { opacity: .5; }
 .results .lb-bd-team { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .results .lb-bd-name { font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .results .lb-bd-stat { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
 .results .lb-bd-total { font-family: var(--mono); font-size: 15px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
-@media (prefers-reduced-motion: reduce) { .results .lb-trk, .results .lb-bd, .results .lb-track { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .results .lb-bd { transition: none; } }
 @media (max-width: 760px) {
   /* matches-played moves up beside the name; the points/teams bar goes full width */
   .results .lb-row { grid-template-columns: 20px auto auto 1fr; row-gap: 8px; }
