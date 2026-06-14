@@ -137,8 +137,14 @@
 .results .lb-mp-lbl i { font-style: normal; font-size: 7px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; opacity: .85; }
 .results .lb-hold-fl { display: inline-flex; opacity: .4; filter: grayscale(.6); }
 /* expanded breakdown — teams ranked by points, with played/result/goals/bonus/total */
-.results .lb-breakdown { padding-top: 12px; border-top: 1px solid var(--hairline); display: flex; flex-direction: column; gap: 4px; }
-.results .lb-bd-head, .results .lb-bd-row { display: grid; grid-template-columns: 1fr 36px 36px 36px 36px 52px; align-items: center; column-gap: 8px; }
+.results .lb-breakdown { display: flex; flex-direction: column; gap: 4px; }
+/* rule only belongs to the open state — a collapsed row's 0-height breakdown would
+   otherwise leave the top border showing as a stray horizontal line inside the card */
+.results .lb-row.open .lb-breakdown { padding-top: 12px; border-top: 1px solid var(--hairline); }
+/* flag+name take the left half; the stat block is packed tight into the right half
+   (1fr spacer absorbs the slack so the numbers stay right-aligned and snug) */
+.results .lb-bd-head, .results .lb-bd-row { display: grid; grid-template-columns: 50% 1fr repeat(4, 28px) 40px; align-items: center; column-gap: 6px; }
+.results .lb-bd-head > :nth-child(2), .results .lb-bd-row > :nth-child(2) { grid-column: 3; }
 .results .lb-bd-head { font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 0 12px 2px; }
 .results .lb-bd-head .lb-bd-stat, .results .lb-bd-head .lb-bd-total { text-align: right; }
 .results .lb-bd-row { background: var(--panel-2); border-radius: 8px; padding: 7px 12px; border-left: 3px solid var(--c, var(--hairline)); }
