@@ -66,26 +66,36 @@
 .results .tabs { display: none; }
 @media (max-width: 760px) {
   .results .tabs { display: inline-flex; }
+  /* tab label + its leading icon sit inline; svg uses the tab's text colour */
+  .results .tabs .tab { display: inline-flex; align-items: center; gap: 6px; }
+  .results .tabs .tab svg { flex: 0 0 auto; }
   .results .tab-panel { display: none; }
   .results[data-tab="league"] [data-panel="league"],
   .results[data-tab="fixtures"] [data-panel="fixtures"],
   .results[data-tab="results"] [data-panel="results"] { display: block; }
-  /* first visible panel sits right under the tab bar — trim its leading gap */
-  .results .tab-panel > .sec-head:first-child { margin-top: 18px; }
+  /* first visible panel sits right under the tab bar: drop the .sec-head top margin so the
+     tab bar's own 20px margin-bottom is the only gap (the two don't collapse — .tabs is
+     inline-flex). The league panel nests its first .sec-head inside a <section>, so catch
+     that depth too, else it keeps the default 34px and sits lower than the other tabs. */
+  .results .tab-panel > .sec-head:first-child,
+  .results .tab-panel > section:first-child > .sec-head:first-child { margin-top: 0; }
 }
 
 .results .sec-head { display: flex; align-items: baseline; gap: 12px; margin: 34px 0 16px; }
 .results .sec-head h2 { font-size: 14px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; margin: 0; color: var(--text); }
 .results .sec-sub { font-family: var(--mono); font-size: 12px; color: var(--muted); }
-.results .sec-toggle { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .03em; color: var(--text);
+.results .sec-toggle { margin-left: auto; font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .03em; color: var(--text);
   background: var(--chip); border: none; padding: 6px 11px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--hairline); cursor: pointer; }
 .results .sec-toggle:hover { background: var(--panel-2); }
 .results .empty { color: var(--muted); font-family: var(--mono); font-size: 13px; padding: 10px 0; }
 
 /* leaderboard */
 .results .lb-grid { display: flex; flex-direction: column; gap: 9px; }
-.results .lb-row { display: grid; grid-template-columns: 22px 80px 56px 1fr auto; align-items: center; column-gap: 12px;
-  background: var(--panel); border: 1px solid var(--hairline); border-radius: 12px; padding: 8px 16px; cursor: pointer; }
+/* gap: 0 12px (not just column-gap) — a global .lb-row in app.css sets gap:12px, whose
+   row-gap would otherwise leak in and add 12px of dead space below the collapsed
+   breakdown row. Open-state separation comes from .lb-breakdown's padding-top instead. */
+.results .lb-row { display: grid; grid-template-columns: 22px 80px 56px 1fr auto; align-items: center; gap: 0 12px;
+  background: var(--panel); border: 1px solid var(--hairline); border-radius: 12px; padding: 10px 16px; cursor: pointer; }
 /* top three get medal outlines (gold/silver/bronze) on both the ring and place number */
 .results .lb-row.gold   { border-color: var(--gold);   box-shadow: 0 0 0 1px var(--gold); }
 .results .lb-row.silver { border-color: var(--silver); box-shadow: 0 0 0 1px var(--silver); }
@@ -142,10 +152,11 @@
 .results .lb-mp-lbl i { font-style: normal; font-size: 7px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; opacity: .85; }
 .results .lb-hold-fl { display: inline-flex; opacity: .4; filter: grayscale(.6); }
 /* expanded breakdown — teams ranked by points, with played/result/goals/bonus/total */
-.results .lb-breakdown { display: flex; flex-direction: column; gap: 4px; }
-/* rule only belongs to the open state — a collapsed row's 0-height breakdown would
-   otherwise leave the top border showing as a stray horizontal line inside the card */
-.results .lb-row.open .lb-breakdown { padding-top: 12px; border-top: 1px solid var(--hairline); }
+/* padding-top is 0 when closed (no residual sliver) and transitions over the SAME
+   duration as the height collapse — so it shrinks smoothly with the content instead of
+   being yanked off in one frame, which would jolt the rows upward at the start. */
+.results .lb-breakdown { display: flex; flex-direction: column; gap: 4px; padding-top: 0; transition: padding-top .3s ease; }
+.results .lb-row.open .lb-breakdown { padding-top: 12px; }
 /* flag+name take the left 45%; the five stat columns (P/R/G/B/Pts) split the
    remaining 55% into equal, evenly-spaced tracks so all five always show */
 .results .lb-bd-head, .results .lb-bd-row { display: grid; grid-template-columns: 45% repeat(5, 1fr); align-items: center; column-gap: 6px; }
@@ -159,7 +170,7 @@
 .results .lb-bd-name { font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .results .lb-bd-stat { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
 .results .lb-bd-total { font-family: var(--mono); font-size: 15px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
-@media (prefers-reduced-motion: reduce) { .results .lb-bd { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .results .lb-bd, .results .lb-breakdown { transition: none; } }
 @media (max-width: 760px) {
   /* matches-played moves up beside the name; the points/teams bar goes full width */
   .results .lb-row { grid-template-columns: 20px auto auto 1fr; row-gap: 8px; }
@@ -183,6 +194,11 @@
 .results .gr-match { display: flex; flex-direction: column; gap: 5px; background: var(--panel-2); border: 1px solid var(--hairline); border-radius: 10px; padding: 8px; }
 /* not played yet — same row format, grey background + slightly greyer text */
 .results .gr-match.pending { background: #191d1c; border-color: rgba(255,255,255,.06); }
+/* pending day-strip cards lay the two team rows beside their kickoff time, which fills
+   the horizontal space the score would otherwise occupy */
+.results .gr-match.pending { flex-direction: row; align-items: center; gap: 10px; }
+.results .gr-match.pending .gr-rows { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.results .gr-time { flex: 0 0 auto; font-family: var(--mono); font-size: 13px; font-weight: 700; letter-spacing: .04em; color: var(--muted); padding-right: 4px; white-space: nowrap; }
 .results .gr-match.pending .rr-abbr,
 .results .gr-match.pending .rr-owner { color: var(--muted); }
 .results .rr { display: flex; align-items: center; gap: 10px; }
