@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev --port 8787",
+    "dev:remote": "wrangler dev --port 8787 --remote",
     "build": "echo \"@wc/api: nothing to build (Worker runs from src)\"",
     "deploy": "wrangler deploy --env production",
     "db:migrate": "wrangler d1 migrations apply worldcup --local",
