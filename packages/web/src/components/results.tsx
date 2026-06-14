@@ -104,6 +104,9 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
   }, [view.matches])
   const lb = view.leaderboard
   const [byPpg, setByPpg] = useState(false)
+  // which rows are expanded into the vertical per-team breakdown (multiple allowed)
+  const [open, setOpen] = useState<Set<string>>(new Set())
+  const toggle = (id: string) => setOpen((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
   // Bar scaling stays tied to the highest TOTAL points regardless of sort, so bars never change.
   const top = Math.max(1, ...lb.map((r) => r.total))
   const allZero = lb.every((r) => r.total === 0)
@@ -139,42 +142,77 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
       {allZero && <p className="empty">No results entered yet — the table fills in as the commissioner enters scorelines.</p>}
       <div className="lb-grid" style={{ ['--hcols-d' as string]: holdColsD, ['--hcols-m' as string]: holdColsM }}>
         {sorted.map(({ row, played, ppg }, i) => {
-          const segs = row.squad.map((x, idx) => ({ team: teamById[x.teamId], total: x.points.total, tier: tierOf(idx), round: idx + 1 }))
+          const segs = row.squad.map((x, idx) => ({ team: teamById[x.teamId], points: x.points, total: x.points.total, tier: tierOf(idx), round: idx + 1 }))
             .filter((s) => s.team)
           const scoring = segs.filter((s) => s.total > 0)
           const holding = segs.filter((s) => s.total <= 0)
+          // expanded view: every team ranked by points (ties keep draft order)
+          const ranked = [...segs].sort((a, b) => b.total - a.total || a.round - b.round)
           const barPct = (row.total / top) * 100
           const isLeader = topMetric > 0 && (byPpg ? ppg === topMetric : row.total === topMetric)
+          const isOpen = open.has(row.managerId)
           return (
-            <div className={clsx('lb-row', isLeader && 'leader', row.managerId === highlight && 'you')} key={row.managerId} style={{ ['--clk' as string]: row.color, ['--row' as string]: i }}>
+            <div className={clsx('lb-row', isLeader && 'leader', row.managerId === highlight && 'you', isOpen && 'open')}
+              key={row.managerId} style={{ ['--clk' as string]: row.color, ['--row' as string]: i }}
+              role="button" tabIndex={0} aria-expanded={isOpen}
+              onClick={() => toggle(row.managerId)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(row.managerId) } }}>
               <span className="lb-place">{i + 1}</span>
               <span className="lb-name">{row.name}{row.managerId === highlight ? ' · you' : ''}</span>
               <div className="lb-pts"><b>{byPpg ? ppg.toFixed(2) : row.total}</b><span>{byPpg ? 'PPG' : 'PTS'}</span></div>
-              <div className="lb-track">
-                <div className="lb-scoring">
-                  <div className="lb-bar" style={{ width: `${barPct}%` }}>
-                    {scoring.map((s) => (
-                      <div className={clsx('lb-seg', `t${s.tier}`)} key={s.team.id} style={{ flexGrow: s.total }}
-                        title={`${s.team.name} · ${s.total} pts · pick ${s.round}`}>
-                        <span className="lb-seg-flag"><Flag code={s.team.code} name={s.team.name} /></span>
-                        <span className="lb-seg-block"><span className="lb-seg-n">{s.total}</span></span>
-                      </div>
-                    ))}
+              <div className="lb-trk">
+                <div className="lb-track">
+                  <div className="lb-scoring">
+                    <div className="lb-bar" style={{ width: `${barPct}%` }}>
+                      {scoring.map((s) => (
+                        <div className={clsx('lb-seg', `t${s.tier}`)} key={s.team.id} style={{ flexGrow: s.total }}
+                          title={`${s.team.name} · ${s.total} pts · pick ${s.round}`}>
+                          <span className="lb-seg-flag"><Flag code={s.team.code} name={s.team.name} /></span>
+                          <span className="lb-seg-block"><span className="lb-seg-n">{s.total}</span></span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
+                  {maxHold > 0 && (
+                    <div className={clsx('lb-hold', !holding.length && 'empty')}>
+                      {holding.map((s) => (
+                        <span className="lb-hold-fl" key={s.team.id} title={`${s.team.name} · 0 pts · pick ${s.round}`}>
+                          <Flag code={s.team.code} name={s.team.name} />
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {maxHold > 0 && (
-                  <div className={clsx('lb-hold', !holding.length && 'empty')}>
-                    {holding.map((s) => (
-                      <span className="lb-hold-fl" key={s.team.id} title={`${s.team.name} · 0 pts · pick ${s.round}`}>
-                        <Flag code={s.team.code} name={s.team.name} />
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
               <span className="lb-mp" title={`${played} matches played by this squad`}>
                 <b>{played}</b><span className="lb-mp-lbl"><i>matches</i><i>played</i></span>
               </span>
+              <div className="lb-bd">
+                <div className="lb-breakdown">
+                  <div className="lb-bd-head">
+                    <span className="lb-bd-team">Team</span>
+                    <span className="lb-bd-stat" title="Matches played">P</span>
+                    <span className="lb-bd-stat" title="Result — win 3 / draw 1 / loss 0">R</span>
+                    <span className="lb-bd-stat" title="Goals — 1 per goal scored">G</span>
+                    <span className="lb-bd-stat" title="Bonus — upset bonus">B</span>
+                    <span className="lb-bd-total">Pts</span>
+                  </div>
+                  {ranked.map((s) => (
+                    <div className={clsx('lb-bd-row', `t${s.tier}`, s.total <= 0 && 'held')} key={s.team.id}>
+                      <span className="lb-bd-team">
+                        <Flag code={s.team.code} name={s.team.name} />
+                        <b className="lb-bd-name">{s.team.name}</b>
+                        <i className="lb-bd-pick">R{s.round}</i>
+                      </span>
+                      <span className="lb-bd-stat">{playedByTeam[s.team.id] || 0}</span>
+                      <span className="lb-bd-stat">{s.points.result}</span>
+                      <span className="lb-bd-stat">{s.points.goals}</span>
+                      <span className="lb-bd-stat">{s.points.bonus}</span>
+                      <span className="lb-bd-total">{s.total}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )
         })}
