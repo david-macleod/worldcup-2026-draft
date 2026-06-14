@@ -83,12 +83,20 @@
 /* leaderboard */
 .results .lb-grid { display: flex; flex-direction: column; gap: 9px; }
 .results .lb-row { display: grid; grid-template-columns: 22px 80px 56px 1fr auto; align-items: center; column-gap: 12px;
-  background: var(--panel); border: 1px solid var(--hairline); border-radius: 12px; padding: 8px 16px; }
+  background: var(--panel); border: 1px solid var(--hairline); border-radius: 12px; padding: 8px 16px; cursor: pointer; }
 .results .lb-row.leader { border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6; }
 .results .lb-row.you { background: color-mix(in srgb, var(--clk) 9%, var(--panel)); }
-.results .lb-place { font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--muted); }
+/* pin children to columns so hiding the bar on expand doesn't reflow the header */
+.results .lb-place { grid-column: 1; font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--muted); }
 .results .lb-row.leader .lb-place { color: var(--gold); }
-.results .lb-name { font-weight: 800; font-size: 18px; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.results .lb-name { grid-column: 2; display: flex; align-items: center; gap: 6px; min-width: 0; font-weight: 800; font-size: 18px; letter-spacing: -.01em; }
+.results .lb-name-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.results .lb-caret { font-size: 10px; color: var(--muted); flex: 0 0 auto; transition: transform .18s ease; }
+.results .lb-row.open .lb-caret { transform: rotate(180deg); color: var(--text); }
+.results .lb-pts { grid-column: 3; }
+.results .lb-track { grid-column: 4; }
+.results .lb-mp { grid-column: 5; }
+.results .lb-row.open .lb-track { display: none; }
 .results .lb-pts { text-align: right; }
 .results .lb-pts b { display: block; font-family: var(--mono); font-size: 24px; font-weight: 700; line-height: 1; }
 .results .lb-pts span { font-size: 9px; letter-spacing: .1em; color: var(--muted); }
@@ -124,6 +132,20 @@
 .results .lb-mp-lbl { display: flex; flex-direction: column; line-height: 1.05; }
 .results .lb-mp-lbl i { font-style: normal; font-size: 7px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; opacity: .85; }
 .results .lb-hold-fl { display: inline-flex; opacity: .4; filter: grayscale(.6); }
+/* expanded breakdown — teams ranked by points, with scored/bonus/total columns */
+.results .lb-breakdown { grid-column: 1 / -1; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--hairline); display: flex; flex-direction: column; gap: 4px; }
+.results .lb-bd-head, .results .lb-bd-row { display: grid; grid-template-columns: 1fr 62px 62px 52px; align-items: center; column-gap: 10px; }
+.results .lb-bd-head { font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 0 12px 2px; }
+.results .lb-bd-head .lb-bd-stat, .results .lb-bd-head .lb-bd-total { text-align: right; }
+.results .lb-bd-row { background: var(--panel-2); border-radius: 8px; padding: 7px 12px; border-left: 3px solid var(--c, var(--hairline)); }
+.results .lb-bd-row.t1 { --c: var(--t1); } .results .lb-bd-row.t2 { --c: var(--t2); } .results .lb-bd-row.t3 { --c: var(--t3); }
+.results .lb-bd-row.held { opacity: .5; }
+.results .lb-bd-team { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.results .lb-bd-name { font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.results .lb-bd-pick { font-style: normal; font-family: var(--mono); font-size: 9.5px; font-weight: 600; color: var(--muted); flex: 0 0 auto; }
+.results .lb-bd-stat { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.results .lb-bd-total { font-family: var(--mono); font-size: 15px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: no-preference) { .results .lb-breakdown { animation: rise .28s ease both; } }
 @media (max-width: 760px) {
   /* matches-played moves up beside the name; the points/teams bar goes full width */
   .results .lb-row { grid-template-columns: 20px auto auto 1fr; row-gap: 8px; }

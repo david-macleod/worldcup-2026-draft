@@ -37,7 +37,7 @@ export interface Match {
   home_pens: number | null; away_pens: number | null; status: string
 }
 export interface TeamPoints {
-  teamId: string; fantasy: number; qualifyBonus: number; knockoutBonus: number; total: number; stage: string
+  teamId: string; result: number; goals: number; bonus: number; total: number; tier: number | null; stage: string
 }
 export interface LeaderboardEntry {
   managerId: string; name: string; color: string; seat: number | null
