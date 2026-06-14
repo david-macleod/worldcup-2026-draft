@@ -5,6 +5,11 @@
   --mono: 'JetBrains Mono', ui-monospace, monospace;
   --ui: 'Archivo', system-ui, sans-serif;
   --accent: #2bd47d; --gold: #f5c451; --silver: #c8d2de; --bronze: #d08b4f; --flag-w: 22px;
+  /* metallic gradients (diagonal light sweep) reused for the medal ring + place number.
+     200% sizing leaves room for the shimmer animation to slide the highlight across. */
+  --grad-gold:   linear-gradient(115deg, #b8860b 0%, #f5c451 22%, #fff4c2 42%, #f5c451 58%, #c9941f 78%, #fceaa0 100%);
+  --grad-silver: linear-gradient(115deg, #8c97a3 0%, #c8d2de 22%, #ffffff 42%, #c8d2de 58%, #97a3b0 78%, #eef3f8 100%);
+  --grad-bronze: linear-gradient(115deg, #8a5226 0%, #d08b4f 22%, #f4cfa6 42%, #d08b4f 58%, #9c5a28 78%, #f0c79a 100%);
   --t1: #2bd47d; --t2: #f5953d; --t3: #d8394c;
   --bg: #081e15; --panel: #0e2a1f; --panel-2: #133527; --chip: #19402f;
   --hairline: rgba(255,255,255,.10); --hairline-2: rgba(255,255,255,.18);
@@ -96,16 +101,37 @@
    breakdown row. Open-state separation comes from .lb-breakdown's padding-top instead. */
 .results .lb-row { display: grid; grid-template-columns: 22px 80px 56px 1fr auto; align-items: center; gap: 0 12px;
   background: var(--panel); border: 1px solid var(--hairline); border-radius: 12px; padding: 10px 16px; cursor: pointer; }
-/* top three get medal outlines (gold/silver/bronze) on both the ring and place number */
-.results .lb-row.gold   { border-color: var(--gold);   box-shadow: 0 0 0 1px var(--gold); }
-.results .lb-row.silver { border-color: var(--silver); box-shadow: 0 0 0 1px var(--silver); }
-.results .lb-row.bronze { border-color: var(--bronze); box-shadow: 0 0 0 1px var(--bronze); }
+/* top three get metallic medal treatment (gold/silver/bronze) on both the ring and
+   place number. The ring is a gradient drawn by a masked ::before pseudo so it follows
+   the border radius and doesn't fight the row's background (e.g. the .you highlight). */
+.results .lb-row.gold, .results .lb-row.silver, .results .lb-row.bronze { position: relative; border-color: transparent; }
+.results .lb-row.gold::before, .results .lb-row.silver::before, .results .lb-row.bronze::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.5px; pointer-events: none;
+  background-size: 200% 200%; background-position: var(--shine, 0%) 50%;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude; }
+.results .lb-row.gold::before   { background-image: var(--grad-gold); }
+.results .lb-row.silver::before { background-image: var(--grad-silver); }
+.results .lb-row.bronze::before { background-image: var(--grad-bronze); }
 .results .lb-row.you { background: color-mix(in srgb, var(--clk) 9%, var(--panel)); }
 /* pin children to columns so collapsing the bar on expand doesn't reflow the header */
 .results .lb-place { grid-column: 1; font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--muted); }
-.results .lb-row.gold   .lb-place { color: var(--gold); }
-.results .lb-row.silver .lb-place { color: var(--silver); }
-.results .lb-row.bronze .lb-place { color: var(--bronze); }
+/* place number: clip the same metallic gradient to the glyphs */
+.results .lb-row.gold .lb-place, .results .lb-row.silver .lb-place, .results .lb-row.bronze .lb-place {
+  background-size: 200% 200%; background-position: var(--shine, 0%) 50%;
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+.results .lb-row.gold   .lb-place { background-image: var(--grad-gold); }
+.results .lb-row.silver .lb-place { background-image: var(--grad-silver); }
+.results .lb-row.bronze .lb-place { background-image: var(--grad-bronze); }
+/* shimmer: slide the light highlight across the ring + number, staggered per place */
+@keyframes lb-shine { 0%, 100% { --shine: 0%; } 50% { --shine: 100%; } }
+@property --shine { syntax: "<percentage>"; inherits: true; initial-value: 0%; }
+.results .lb-row.gold, .results .lb-row.silver, .results .lb-row.bronze { animation: lb-shine 6s ease-in-out infinite; }
+.results .lb-row.silver { animation-delay: -2s; }
+.results .lb-row.bronze { animation-delay: -4s; }
+@media (prefers-reduced-motion: reduce) {
+  .results .lb-row.gold, .results .lb-row.silver, .results .lb-row.bronze { animation: none; }
+}
 .results .lb-name { grid-column: 2; font-weight: 800; font-size: 18px; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .results .lb-pts { grid-column: 3; }
 .results .lb-trk { grid-column: 4; }

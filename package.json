@@ -4,6 +4,7 @@
   "packageManager": "pnpm@11.5.2",
   "scripts": {
     "dev": "turbo run dev",
+    "dev:remote": "turbo run dev:remote",
     "build": "turbo run build",
     "test": "turbo run test",
     "ship": "pnpm --filter @wc/api run deploy",
