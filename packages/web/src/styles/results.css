@@ -65,7 +65,6 @@
   .results .tabs { display: inline-flex; }
   .results .tab-panel { display: none; }
   .results[data-tab="league"] [data-panel="league"],
-  .results[data-tab="managers"] [data-panel="managers"],
   .results[data-tab="fixtures"] [data-panel="fixtures"],
   .results[data-tab="results"] [data-panel="results"] { display: block; }
   /* first visible panel sits right under the tab bar — trim its leading gap */
@@ -86,17 +85,22 @@
   background: var(--panel); border: 1px solid var(--hairline); border-radius: 12px; padding: 8px 16px; cursor: pointer; }
 .results .lb-row.leader { border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6; }
 .results .lb-row.you { background: color-mix(in srgb, var(--clk) 9%, var(--panel)); }
-/* pin children to columns so hiding the bar on expand doesn't reflow the header */
+/* pin children to columns so collapsing the bar on expand doesn't reflow the header */
 .results .lb-place { grid-column: 1; font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--muted); }
 .results .lb-row.leader .lb-place { color: var(--gold); }
-.results .lb-name { grid-column: 2; display: flex; align-items: center; gap: 6px; min-width: 0; font-weight: 800; font-size: 18px; letter-spacing: -.01em; }
-.results .lb-name-txt { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.results .lb-caret { font-size: 10px; color: var(--muted); flex: 0 0 auto; transition: transform .18s ease; }
-.results .lb-row.open .lb-caret { transform: rotate(180deg); color: var(--text); }
+.results .lb-name { grid-column: 2; font-weight: 800; font-size: 18px; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .results .lb-pts { grid-column: 3; }
-.results .lb-track { grid-column: 4; }
+.results .lb-trk { grid-column: 4; }
 .results .lb-mp { grid-column: 5; }
-.results .lb-row.open .lb-track { display: none; }
+/* expand/collapse — silent (no caret): the bar collapses and the breakdown opens,
+   both via a grid-template-rows 0fr⇄1fr transition (animates in AND out). */
+.results .lb-trk { display: grid; grid-template-rows: 1fr; min-width: 0; transition: grid-template-rows .3s ease; }
+.results .lb-row.open .lb-trk { grid-template-rows: 0fr; }
+.results .lb-trk > .lb-track { overflow: hidden; }
+.results .lb-row.open .lb-trk > .lb-track { min-height: 0; }
+.results .lb-bd { grid-column: 1 / -1; display: grid; grid-template-rows: 0fr; transition: grid-template-rows .3s ease; }
+.results .lb-row.open .lb-bd { grid-template-rows: 1fr; }
+.results .lb-bd > .lb-breakdown { overflow: hidden; min-height: 0; }
 .results .lb-pts { text-align: right; }
 .results .lb-pts b { display: block; font-family: var(--mono); font-size: 24px; font-weight: 700; line-height: 1; }
 .results .lb-pts span { font-size: 9px; letter-spacing: .1em; color: var(--muted); }
@@ -132,8 +136,8 @@
 .results .lb-mp-lbl { display: flex; flex-direction: column; line-height: 1.05; }
 .results .lb-mp-lbl i { font-style: normal; font-size: 7px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; opacity: .85; }
 .results .lb-hold-fl { display: inline-flex; opacity: .4; filter: grayscale(.6); }
-/* expanded breakdown — teams ranked by points, with scored/bonus/total columns */
-.results .lb-breakdown { grid-column: 1 / -1; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--hairline); display: flex; flex-direction: column; gap: 4px; }
+/* expanded breakdown — teams ranked by points, with played/result/goals/bonus/total */
+.results .lb-breakdown { padding-top: 12px; border-top: 1px solid var(--hairline); display: flex; flex-direction: column; gap: 4px; }
 .results .lb-bd-head, .results .lb-bd-row { display: grid; grid-template-columns: 1fr 36px 36px 36px 36px 52px; align-items: center; column-gap: 8px; }
 .results .lb-bd-head { font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 0 12px 2px; }
 .results .lb-bd-head .lb-bd-stat, .results .lb-bd-head .lb-bd-total { text-align: right; }
@@ -145,7 +149,7 @@
 .results .lb-bd-pick { font-style: normal; font-family: var(--mono); font-size: 9.5px; font-weight: 600; color: var(--muted); flex: 0 0 auto; }
 .results .lb-bd-stat { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
 .results .lb-bd-total { font-family: var(--mono); font-size: 15px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
-@media (prefers-reduced-motion: no-preference) { .results .lb-breakdown { animation: rise .28s ease both; } }
+@media (prefers-reduced-motion: reduce) { .results .lb-trk, .results .lb-bd { transition: none; } }
 @media (max-width: 760px) {
   /* matches-played moves up beside the name; the points/teams bar goes full width */
   .results .lb-row { grid-template-columns: 20px auto auto 1fr; row-gap: 8px; }
@@ -153,7 +157,7 @@
   .results .lb-name { grid-column: 2; grid-row: 1; }
   .results .lb-mp { grid-column: 3; grid-row: 1; padding-left: 0; }
   .results .lb-pts { grid-column: 4; grid-row: 1; justify-self: end; text-align: right; }
-  .results .lb-track { grid-column: 1 / -1; grid-row: 2; }
+  .results .lb-trk { grid-column: 1 / -1; grid-row: 2; }
   /* yet-to-score wraps to 2 rows (≤3 cols); reserved width snaps with the global max */
   .results .lb-hold { width: calc(var(--hcols-m, 3) * var(--flag-w) + (var(--hcols-m, 3) - 1) * 5px); }
 }
@@ -265,25 +269,6 @@
   .results .tier-band { flex-direction: column; gap: 6px; }
   .results .tier-label { padding-top: 0; min-width: 0; }
 }
-
-/* managers — every manager's drafted squad as a card grid, sortable by seat/rank */
-.results .mgr-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
-@media (max-width: 720px) { .results .mgr-grid { grid-template-columns: 1fr; } }
-.results .mgr-card { background: var(--panel); border: 1px solid var(--hairline); border-radius: 12px; padding: 13px 15px; }
-.results .mgr-card.you { background: color-mix(in srgb, var(--clk) 9%, var(--panel)); }
-.results .mgr-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 11px; }
-.results .mgr-rank { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--muted); flex: 0 0 auto; }
-.results .mgr-name { font-weight: 800; font-size: 17px; letter-spacing: -.01em; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  border-left: 3px solid var(--clk, var(--accent)); padding-left: 9px; line-height: 1.1; }
-.results .mgr-pts { text-align: right; flex: 0 0 auto; }
-.results .mgr-pts b { font-family: var(--mono); font-size: 20px; font-weight: 700; }
-.results .mgr-pts span { font-size: 9px; letter-spacing: .1em; color: var(--muted); margin-left: 3px; }
-.results .mgr-squad { display: flex; flex-wrap: wrap; gap: 6px; }
-.results .mgr-pick { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px 4px 6px; border-radius: 8px;
-  border: 2px solid var(--c); background: var(--panel-2); }
-.results .mgr-pick.t1 { --c: var(--t1); } .results .mgr-pick.t2 { --c: var(--t2); } .results .mgr-pick.t3 { --c: var(--t3); }
-.results .mgr-abbr { font-family: var(--mono); font-weight: 700; font-size: 12px; }
-.results .mgr-pick-pts { font-family: var(--mono); font-weight: 700; font-size: 12px; color: var(--muted); }
 
 /* ───────────────────────── animations ─────────────────────────
    Entrance + live-update motion. Entrance runs once on mount (nodes are keyed
