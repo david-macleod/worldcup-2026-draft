@@ -202,7 +202,6 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
                       <span className="lb-bd-team">
                         <Flag code={s.team.code} name={s.team.name} />
                         <b className="lb-bd-name">{s.team.name}</b>
-                        <i className="lb-bd-pick">R{s.round}</i>
                       </span>
                       <span className="lb-bd-stat">{playedByTeam[s.team.id] || 0}</span>
                       <span className="lb-bd-stat">{s.points.result}</span>
@@ -366,8 +365,10 @@ function DayStrip({ days, owners }: { days: CDay[]; owners: Owners }) {
       <div className="ds-head">
         <button className="ds-nav" aria-label="Previous day" disabled={i <= 0} onClick={() => go(i - 1)}>‹<span className="ds-nav-lbl"> Prev</span></button>
         <div className="ds-title">
-          <span className="ds-title-row">{rel && <span className="ds-rel">{rel}</span>}{day.label}</span>
-          <span className="ds-count">{day.matches.length} match{day.matches.length === 1 ? '' : 'es'}</span>
+          <span className="ds-title-row">{day.label}</span>
+          {/* badge sits below the date; render it even when empty (visibility hidden via
+              .is-empty) so the header height is identical with or without a badge */}
+          <span className={clsx('ds-rel', !rel && 'is-empty')}>{rel || ' '}</span>
         </div>
         <button className="ds-nav" aria-label="Next day" disabled={i >= days.length - 1} onClick={() => go(i + 1)}><span className="ds-nav-lbl">Next </span>›</button>
       </div>

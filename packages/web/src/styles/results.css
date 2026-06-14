@@ -41,8 +41,9 @@
 .results .ds-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 11px; }
 .results .ds-title { display: flex; flex-direction: column; align-items: center; gap: 3px; min-width: 0; }
 .results .ds-title-row { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 16px; letter-spacing: -.01em; }
-.results .ds-rel { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--on-accent); background: var(--accent); padding: 2px 7px; border-radius: 999px; }
-.results .ds-count { font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: .04em; }
+.results .ds-rel { display: inline-block; font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--on-accent); background: var(--accent); padding: 2px 7px; border-radius: 999px; }
+/* empty badge slot still occupies its height so the header doesn't jump between days */
+.results .ds-rel.is-empty { visibility: hidden; }
 .results .ds-nav { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--text); background: var(--chip); padding: 7px 12px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--hairline); flex: 0 0 auto; }
 .results .ds-nav:hover:not(:disabled) { background: var(--panel-2); }
 .results .ds-nav:disabled { opacity: .3; cursor: not-allowed; }
@@ -96,7 +97,9 @@
    both via a grid-template-rows 0fr⇄1fr transition (animates in AND out). */
 .results .lb-trk { display: grid; grid-template-rows: 1fr; min-width: 0; transition: grid-template-rows .3s ease; }
 .results .lb-row.open .lb-trk { grid-template-rows: 0fr; }
-.results .lb-trk > .lb-track { overflow: hidden; }
+/* transition the min-height floor too, otherwise on close it snaps back to 46px
+   instantly and the bar pops in rather than folding down with the grid-rows transition */
+.results .lb-trk > .lb-track { overflow: hidden; transition: min-height .3s ease; }
 .results .lb-row.open .lb-trk > .lb-track { min-height: 0; }
 .results .lb-bd { grid-column: 1 / -1; display: grid; grid-template-rows: 0fr; transition: grid-template-rows .3s ease; }
 .results .lb-row.open .lb-bd { grid-template-rows: 1fr; }
@@ -141,10 +144,9 @@
 /* rule only belongs to the open state — a collapsed row's 0-height breakdown would
    otherwise leave the top border showing as a stray horizontal line inside the card */
 .results .lb-row.open .lb-breakdown { padding-top: 12px; border-top: 1px solid var(--hairline); }
-/* flag+name take the left half; the stat block is packed tight into the right half
-   (1fr spacer absorbs the slack so the numbers stay right-aligned and snug) */
-.results .lb-bd-head, .results .lb-bd-row { display: grid; grid-template-columns: 50% 1fr repeat(4, 28px) 40px; align-items: center; column-gap: 6px; }
-.results .lb-bd-head > :nth-child(2), .results .lb-bd-row > :nth-child(2) { grid-column: 3; }
+/* flag+name take the left 45%; the five stat columns (P/R/G/B/Pts) split the
+   remaining 55% into equal, evenly-spaced tracks so all five always show */
+.results .lb-bd-head, .results .lb-bd-row { display: grid; grid-template-columns: 45% repeat(5, 1fr); align-items: center; column-gap: 6px; }
 .results .lb-bd-head { font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 0 12px 2px; }
 /* the cells reuse the data-row classes, so re-assert the header treatment here or
    the 13/15px value sizes leak in and the P/R/G/B/Pts labels render oversized */
@@ -154,10 +156,9 @@
 .results .lb-bd-row.held { opacity: .5; }
 .results .lb-bd-team { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .results .lb-bd-name { font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.results .lb-bd-pick { font-style: normal; font-family: var(--mono); font-size: 9.5px; font-weight: 600; color: var(--muted); flex: 0 0 auto; }
 .results .lb-bd-stat { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
 .results .lb-bd-total { font-family: var(--mono); font-size: 15px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
-@media (prefers-reduced-motion: reduce) { .results .lb-trk, .results .lb-bd { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .results .lb-trk, .results .lb-bd, .results .lb-track { transition: none; } }
 @media (max-width: 760px) {
   /* matches-played moves up beside the name; the points/teams bar goes full width */
   .results .lb-row { grid-template-columns: 20px auto auto 1fr; row-gap: 8px; }
