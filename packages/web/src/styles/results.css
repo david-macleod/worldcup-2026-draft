@@ -96,7 +96,9 @@
    both via a grid-template-rows 0fr⇄1fr transition (animates in AND out). */
 .results .lb-trk { display: grid; grid-template-rows: 1fr; min-width: 0; transition: grid-template-rows .3s ease; }
 .results .lb-row.open .lb-trk { grid-template-rows: 0fr; }
-.results .lb-trk > .lb-track { overflow: hidden; }
+/* transition the min-height floor too, otherwise on close it snaps back to 46px
+   instantly and the bar pops in rather than folding down with the grid-rows transition */
+.results .lb-trk > .lb-track { overflow: hidden; transition: min-height .3s ease; }
 .results .lb-row.open .lb-trk > .lb-track { min-height: 0; }
 .results .lb-bd { grid-column: 1 / -1; display: grid; grid-template-rows: 0fr; transition: grid-template-rows .3s ease; }
 .results .lb-row.open .lb-bd { grid-template-rows: 1fr; }
@@ -156,7 +158,7 @@
 .results .lb-bd-pick { font-style: normal; font-family: var(--mono); font-size: 9.5px; font-weight: 600; color: var(--muted); flex: 0 0 auto; }
 .results .lb-bd-stat { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
 .results .lb-bd-total { font-family: var(--mono); font-size: 15px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
-@media (prefers-reduced-motion: reduce) { .results .lb-trk, .results .lb-bd { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .results .lb-trk, .results .lb-bd, .results .lb-track { transition: none; } }
 @media (max-width: 760px) {
   /* matches-played moves up beside the name; the points/teams bar goes full width */
   .results .lb-row { grid-template-columns: 20px auto auto 1fr; row-gap: 8px; }
