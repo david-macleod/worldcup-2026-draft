@@ -4,7 +4,7 @@
 .results {
   --mono: 'JetBrains Mono', ui-monospace, monospace;
   --ui: 'Archivo', system-ui, sans-serif;
-  --accent: #2bd47d; --gold: #f5c451; --flag-w: 22px;
+  --accent: #2bd47d; --gold: #f5c451; --silver: #c8d2de; --bronze: #d08b4f; --flag-w: 22px;
   --t1: #2bd47d; --t2: #f5953d; --t3: #d8394c;
   --bg: #081e15; --panel: #0e2a1f; --panel-2: #133527; --chip: #19402f;
   --hairline: rgba(255,255,255,.10); --hairline-2: rgba(255,255,255,.18);
@@ -86,11 +86,16 @@
 .results .lb-grid { display: flex; flex-direction: column; gap: 9px; }
 .results .lb-row { display: grid; grid-template-columns: 22px 80px 56px 1fr auto; align-items: center; column-gap: 12px;
   background: var(--panel); border: 1px solid var(--hairline); border-radius: 12px; padding: 8px 16px; cursor: pointer; }
-.results .lb-row.leader { border-color: #3b82f6; box-shadow: 0 0 0 1px #3b82f6; }
+/* top three get medal outlines (gold/silver/bronze) on both the ring and place number */
+.results .lb-row.gold   { border-color: var(--gold);   box-shadow: 0 0 0 1px var(--gold); }
+.results .lb-row.silver { border-color: var(--silver); box-shadow: 0 0 0 1px var(--silver); }
+.results .lb-row.bronze { border-color: var(--bronze); box-shadow: 0 0 0 1px var(--bronze); }
 .results .lb-row.you { background: color-mix(in srgb, var(--clk) 9%, var(--panel)); }
 /* pin children to columns so collapsing the bar on expand doesn't reflow the header */
 .results .lb-place { grid-column: 1; font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--muted); }
-.results .lb-row.leader .lb-place { color: var(--gold); }
+.results .lb-row.gold   .lb-place { color: var(--gold); }
+.results .lb-row.silver .lb-place { color: var(--silver); }
+.results .lb-row.bronze .lb-place { color: var(--bronze); }
 .results .lb-name { grid-column: 2; font-weight: 800; font-size: 18px; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .results .lb-pts { grid-column: 3; }
 .results .lb-trk { grid-column: 4; }

@@ -125,7 +125,6 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
   const sorted = byPpg
     ? [...rows].sort((a, b) => b.ppg - a.ppg || b.row.total - a.row.total || a.row.name.localeCompare(b.row.name))
     : rows
-  const topMetric = sorted.length ? (byPpg ? sorted[0].ppg : sorted[0].row.total) : 0
 
   return (
     <>
@@ -149,10 +148,11 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
           // expanded view: every team ranked by points (ties keep draft order)
           const ranked = [...segs].sort((a, b) => b.total - a.total || a.round - b.round)
           const barPct = (row.total / top) * 100
-          const isLeader = topMetric > 0 && (byPpg ? ppg === topMetric : row.total === topMetric)
+          // top three (with a positive score) get gold/silver/bronze medal styling
+          const medal = (byPpg ? ppg : row.total) > 0 && i < 3 ? (['gold', 'silver', 'bronze'] as const)[i] : null
           const isOpen = open.has(row.managerId)
           return (
-            <div className={clsx('lb-row', isLeader && 'leader', row.managerId === highlight && 'you', isOpen && 'open')}
+            <div className={clsx('lb-row', medal, row.managerId === highlight && 'you', isOpen && 'open')}
               key={row.managerId} style={{ ['--clk' as string]: row.color, ['--row' as string]: i }}
               role="button" tabIndex={0} aria-expanded={isOpen}
               onClick={() => toggle(row.managerId)}
