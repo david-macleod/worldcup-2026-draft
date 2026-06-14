@@ -192,8 +192,9 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
                 <div className="lb-breakdown">
                   <div className="lb-bd-head">
                     <span className="lb-bd-team">Team</span>
-                    <span className="lb-bd-stat">Scored</span>
-                    <span className="lb-bd-stat">Bonus</span>
+                    <span className="lb-bd-stat" title="Result — win 3 / draw 1 / loss 0">R</span>
+                    <span className="lb-bd-stat" title="Goals — 1 per goal scored">G</span>
+                    <span className="lb-bd-stat" title="Bonus — upset bonus">B</span>
                     <span className="lb-bd-total">Pts</span>
                   </div>
                   {ranked.map((s) => (
@@ -203,7 +204,8 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
                         <b className="lb-bd-name">{s.team.name}</b>
                         <i className="lb-bd-pick">R{s.round}</i>
                       </span>
-                      <span className="lb-bd-stat">{s.points.result + s.points.goals}</span>
+                      <span className="lb-bd-stat">{s.points.result}</span>
+                      <span className="lb-bd-stat">{s.points.goals}</span>
                       <span className="lb-bd-stat">{s.points.bonus}</span>
                       <span className="lb-bd-total">{s.total}</span>
                     </div>
