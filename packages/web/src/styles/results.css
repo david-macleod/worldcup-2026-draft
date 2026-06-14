@@ -260,6 +260,11 @@
 .results .tier-teams { flex: 1; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px 8px; }
 .results .tier-team { display: inline-flex; align-items: center; gap: 4px; font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--muted); }
 .results .tier-team .flag { width: 18px; height: 12px; }
+/* mobile: stack the tier label above the flags so the grid gets the full width */
+@media (max-width: 760px) {
+  .results .tier-band { flex-direction: column; gap: 6px; }
+  .results .tier-label { padding-top: 0; min-width: 0; }
+}
 
 /* managers — every manager's drafted squad as a card grid, sortable by seat/rank */
 .results .mgr-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
