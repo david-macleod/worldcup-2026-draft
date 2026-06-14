@@ -202,7 +202,6 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
                       <span className="lb-bd-team">
                         <Flag code={s.team.code} name={s.team.name} />
                         <b className="lb-bd-name">{s.team.name}</b>
-                        <i className="lb-bd-pick">R{s.round}</i>
                       </span>
                       <span className="lb-bd-stat">{playedByTeam[s.team.id] || 0}</span>
                       <span className="lb-bd-stat">{s.points.result}</span>

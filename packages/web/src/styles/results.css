@@ -143,9 +143,9 @@
 /* rule only belongs to the open state — a collapsed row's 0-height breakdown would
    otherwise leave the top border showing as a stray horizontal line inside the card */
 .results .lb-row.open .lb-breakdown { padding-top: 12px; border-top: 1px solid var(--hairline); }
-/* flag+name take the left half; the five stat columns (P/R/G/B/Pts) split the
-   right half into equal, evenly-spaced tracks so all five always show */
-.results .lb-bd-head, .results .lb-bd-row { display: grid; grid-template-columns: 50% repeat(5, 1fr); align-items: center; column-gap: 6px; }
+/* flag+name take the left 45%; the five stat columns (P/R/G/B/Pts) split the
+   remaining 55% into equal, evenly-spaced tracks so all five always show */
+.results .lb-bd-head, .results .lb-bd-row { display: grid; grid-template-columns: 45% repeat(5, 1fr); align-items: center; column-gap: 6px; }
 .results .lb-bd-head { font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 0 12px 2px; }
 /* the cells reuse the data-row classes, so re-assert the header treatment here or
    the 13/15px value sizes leak in and the P/R/G/B/Pts labels render oversized */
@@ -155,7 +155,6 @@
 .results .lb-bd-row.held { opacity: .5; }
 .results .lb-bd-team { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .results .lb-bd-name { font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.results .lb-bd-pick { font-style: normal; font-family: var(--mono); font-size: 9.5px; font-weight: 600; color: var(--muted); flex: 0 0 auto; }
 .results .lb-bd-stat { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
 .results .lb-bd-total { font-family: var(--mono); font-size: 15px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { .results .lb-trk, .results .lb-bd, .results .lb-track { transition: none; } }
