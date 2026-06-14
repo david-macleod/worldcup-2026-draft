@@ -124,7 +124,7 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
   })
   const sorted = byPpg
     ? [...rows].sort((a, b) => b.ppg - a.ppg || b.row.total - a.row.total || a.row.name.localeCompare(b.row.name))
-    : rows
+    : [...rows].sort((a, b) => b.row.total - a.row.total || b.played - a.played || a.row.name.localeCompare(b.row.name))
   const topMetric = sorted.length ? (byPpg ? sorted[0].ppg : sorted[0].row.total) : 0
 
   return (
@@ -198,7 +198,7 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
                     <span className="lb-bd-total">Pts</span>
                   </div>
                   {ranked.map((s) => (
-                    <div className={clsx('lb-bd-row', `t${s.tier}`, s.total <= 0 && 'held')} key={s.team.id}>
+                    <div className={clsx('lb-bd-row', `t${s.tier}`)} key={s.team.id}>
                       <span className="lb-bd-team">
                         <Flag code={s.team.code} name={s.team.name} />
                         <b className="lb-bd-name">{s.team.name}</b>

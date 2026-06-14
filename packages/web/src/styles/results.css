@@ -11,6 +11,8 @@
   --text: #eafff3; --muted: #84b29b; --on-accent: #06140d;
   font-family: var(--ui); color: var(--text);
   max-width: 1280px; margin: 0 auto; padding: 28px 24px 80px;
+  /* no grey/blue tap-highlight flash on mobile when tapping rows, tabs or nav (inherits) */
+  -webkit-tap-highlight-color: transparent;
 }
 .results * { box-sizing: border-box; }
 
@@ -153,7 +155,6 @@
 .results .lb-bd-head .lb-bd-stat, .results .lb-bd-head .lb-bd-total { font-size: 9.5px; font-weight: 600; text-align: right; }
 .results .lb-bd-row { background: var(--panel-2); border-radius: 8px; padding: 7px 12px; border-left: 3px solid var(--c, var(--hairline)); }
 .results .lb-bd-row.t1 { --c: var(--t1); } .results .lb-bd-row.t2 { --c: var(--t2); } .results .lb-bd-row.t3 { --c: var(--t3); }
-.results .lb-bd-row.held { opacity: .5; }
 .results .lb-bd-team { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .results .lb-bd-name { font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .results .lb-bd-stat { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
