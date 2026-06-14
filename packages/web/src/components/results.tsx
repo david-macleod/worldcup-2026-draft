@@ -265,8 +265,81 @@ function GroupResultsFeed({ groups, owners }: {
   )
 }
 
+// ── Managers — every manager with their drafted squad, sortable by seat (draft
+// order) or live rank. Each pick keeps its tier colour + round and shows points. ──
+interface RosterPick { team: Team; tier: number; round: number; total: number }
+interface RosterRow { managerId: string; name: string; color: string; seat: number | null; rank: number; total: number; played: number; squad: RosterPick[] }
+function managerRosters(view: LeagueView): RosterRow[] {
+  const n = view.league.nManagers
+  const teamById = Object.fromEntries(view.teams.map((t) => [t.id, t]))
+  const rankOf: Record<string, number> = {}
+  const totalOf: Record<string, number> = {}
+  view.leaderboard.forEach((r, i) => { rankOf[r.managerId] = i + 1; totalOf[r.managerId] = r.total })
+  // finished-match appearances per team (a team that has played twice counts 2)
+  const playedByTeam: Record<string, number> = {}
+  for (const m of view.matches) {
+    if (m.status !== 'finished') continue
+    if (m.home_team_id) playedByTeam[m.home_team_id] = (playedByTeam[m.home_team_id] || 0) + 1
+    if (m.away_team_id) playedByTeam[m.away_team_id] = (playedByTeam[m.away_team_id] || 0) + 1
+  }
+  const picksByMgr: Record<string, typeof view.picks> = {}
+  for (const p of [...view.picks].sort((a, b) => a.overall - b.overall)) (picksByMgr[p.managerId] ||= []).push(p)
+  return view.managers.map((m) => {
+    const squad = (picksByMgr[m.id] || []).map((p) => {
+      const round = Math.floor(p.overall / n)
+      return { team: teamById[p.teamId], tier: tierOf(round), round: round + 1, total: view.perTeamPoints[p.teamId]?.total ?? 0 }
+    }).filter((s): s is RosterPick => !!s.team)
+    const played = squad.reduce((s, x) => s + (playedByTeam[x.team.id] || 0), 0)
+    return { managerId: m.id, name: m.name, color: m.color, seat: m.seat, rank: rankOf[m.id] ?? 0, total: totalOf[m.id] ?? 0, played, squad }
+  })
+}
+
+function ManagersPanel({ view, highlight }: { view: LeagueView; highlight?: string }) {
+  const rosters = useMemo(() => managerRosters(view), [view])
+  const [byRank, setByRank] = useState(false)
+  const sorted = useMemo(() => byRank
+    ? [...rosters].sort((a, b) => (a.rank || 99) - (b.rank || 99) || a.name.localeCompare(b.name))
+    : [...rosters].sort((a, b) => (a.seat ?? 99) - (b.seat ?? 99) || a.name.localeCompare(b.name)), [rosters, byRank])
+
+  return (
+    <>
+      <div className="sec-head">
+        <h2>Managers</h2>
+        <button className="sec-toggle" onClick={() => setByRank((v) => !v)}>
+          {byRank ? 'Sort by draft order' : 'Sort by rank'}
+        </button>
+      </div>
+      {!view.picks.length
+        ? <p className="empty">No picks yet — manager squads appear here once the draft begins.</p>
+        : (
+          <div className="mgr-grid">
+            {sorted.map((r) => (
+              <div className={clsx('mgr-card', r.managerId === highlight && 'you')} key={r.managerId} style={{ ['--clk' as string]: r.color }}>
+                <div className="mgr-head">
+                  <span className="mgr-rank" title={`${r.played} matches played by this squad`}>{r.rank ? `#${r.rank}` : '—'}</span>
+                  <span className="mgr-name">{r.name}{r.managerId === highlight ? ' · you' : ''}</span>
+                  <span className="mgr-pts"><b>{r.total}</b><span>PTS</span></span>
+                </div>
+                <div className="mgr-squad">
+                  {r.squad.map((s) => (
+                    <span className={clsx('mgr-pick', `t${s.tier}`)} key={s.team.id} title={`${s.team.name} · ${s.total} pts · pick ${s.round}`}>
+                      <Flag code={s.team.code} name={s.team.name} />
+                      <span className="mgr-abbr">{s.team.abbr}</span>
+                      <span className="mgr-pick-pts">{s.total}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+    </>
+  )
+}
+
 const TABS = [
   { id: 'league', label: 'League' },
+  { id: 'managers', label: 'Managers' },
   { id: 'fixtures', label: 'Fixtures' },
   { id: 'results', label: 'Results' },
 ] as const
@@ -412,6 +485,10 @@ export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; h
           </div>
           <TiersPanel view={view} />
         </div>
+      </div>
+
+      <div className="tab-panel" data-panel="managers">
+        <ManagersPanel view={view} highlight={highlight} />
       </div>
 
       <div className="tab-panel" data-panel="results">

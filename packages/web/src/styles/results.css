@@ -65,6 +65,7 @@
   .results .tabs { display: inline-flex; }
   .results .tab-panel { display: none; }
   .results[data-tab="league"] [data-panel="league"],
+  .results[data-tab="managers"] [data-panel="managers"],
   .results[data-tab="fixtures"] [data-panel="fixtures"],
   .results[data-tab="results"] [data-panel="results"] { display: block; }
   /* first visible panel sits right under the tab bar — trim its leading gap */
@@ -237,6 +238,25 @@
 .results .tier-teams { flex: 1; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px 8px; }
 .results .tier-team { display: inline-flex; align-items: center; gap: 4px; font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--muted); }
 .results .tier-team .flag { width: 18px; height: 12px; }
+
+/* managers — every manager's drafted squad as a card grid, sortable by seat/rank */
+.results .mgr-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+@media (max-width: 720px) { .results .mgr-grid { grid-template-columns: 1fr; } }
+.results .mgr-card { background: var(--panel); border: 1px solid var(--hairline); border-radius: 12px; padding: 13px 15px; }
+.results .mgr-card.you { background: color-mix(in srgb, var(--clk) 9%, var(--panel)); }
+.results .mgr-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 11px; }
+.results .mgr-rank { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--muted); flex: 0 0 auto; }
+.results .mgr-name { font-weight: 800; font-size: 17px; letter-spacing: -.01em; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  border-left: 3px solid var(--clk, var(--accent)); padding-left: 9px; line-height: 1.1; }
+.results .mgr-pts { text-align: right; flex: 0 0 auto; }
+.results .mgr-pts b { font-family: var(--mono); font-size: 20px; font-weight: 700; }
+.results .mgr-pts span { font-size: 9px; letter-spacing: .1em; color: var(--muted); margin-left: 3px; }
+.results .mgr-squad { display: flex; flex-wrap: wrap; gap: 6px; }
+.results .mgr-pick { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px 4px 6px; border-radius: 8px;
+  border: 2px solid var(--c); background: var(--panel-2); }
+.results .mgr-pick.t1 { --c: var(--t1); } .results .mgr-pick.t2 { --c: var(--t2); } .results .mgr-pick.t3 { --c: var(--t3); }
+.results .mgr-abbr { font-family: var(--mono); font-weight: 700; font-size: 12px; }
+.results .mgr-pick-pts { font-family: var(--mono); font-weight: 700; font-size: 12px; color: var(--muted); }
 
 /* ───────────────────────── animations ─────────────────────────
    Entrance + live-update motion. Entrance runs once on mount (nodes are keyed
