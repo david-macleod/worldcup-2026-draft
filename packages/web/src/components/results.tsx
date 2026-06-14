@@ -124,7 +124,7 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
   })
   const sorted = byPpg
     ? [...rows].sort((a, b) => b.ppg - a.ppg || b.row.total - a.row.total || a.row.name.localeCompare(b.row.name))
-    : [...rows].sort((a, b) => b.row.total - a.row.total || b.played - a.played || a.row.name.localeCompare(b.row.name))
+    : rows
   const topMetric = sorted.length ? (byPpg ? sorted[0].ppg : sorted[0].row.total) : 0
 
   return (
@@ -146,8 +146,8 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
             .filter((s) => s.team)
           const scoring = segs.filter((s) => s.total > 0)
           const holding = segs.filter((s) => s.total <= 0)
-          // expanded view: every team ranked by points (ties keep draft order)
-          const ranked = [...segs].sort((a, b) => b.total - a.total || a.round - b.round)
+          // expanded view: every team ranked by points; ties go to more games played, then draft order
+          const ranked = [...segs].sort((a, b) => b.total - a.total || (playedByTeam[b.team.id] || 0) - (playedByTeam[a.team.id] || 0) || a.round - b.round)
           const barPct = (row.total / top) * 100
           const isLeader = topMetric > 0 && (byPpg ? ppg === topMetric : row.total === topMetric)
           const isOpen = open.has(row.managerId)
