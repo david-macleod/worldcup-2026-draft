@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from '@tanstack/react-router'
 import { apiFetch, type FixturesView, type Match, type Team } from '../lib/api'
 import { Flag, teamMap } from '../components/ui'
+import { GroupTable } from '../components/GroupTable'
 
 const KO_STAGES = ['R32', 'R16', 'QF', 'SF', 'Final'] as const
 const KO_LABEL: Record<string, string> = {
@@ -40,68 +41,6 @@ function kickoffParts(iso: string | null): { key: string; dateLabel: string; tim
 
 const byKickoff = (a: Match, b: Match) =>
   (a.kickoff ?? '').localeCompare(b.kickoff ?? '') || a.id.localeCompare(b.id)
-
-type Standing = {
-  team: Team
-  p: number; w: number; d: number; l: number; gf: number; ga: number; gd: number; pts: number
-}
-
-// Build a group table from finished group matches. Sorted points → GD → GF.
-function groupTable(teams: Team[], matches: Match[]): Standing[] {
-  const rows = new Map<string, Standing>()
-  for (const t of teams) rows.set(t.id, { team: t, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, gd: 0, pts: 0 })
-
-  for (const m of matches) {
-    if (m.status !== 'finished' || m.home_goals == null || m.away_goals == null) continue
-    const h = m.home_team_id && rows.get(m.home_team_id)
-    const a = m.away_team_id && rows.get(m.away_team_id)
-    if (!h || !a) continue
-    h.p++; a.p++
-    h.gf += m.home_goals; h.ga += m.away_goals
-    a.gf += m.away_goals; a.ga += m.home_goals
-    if (m.home_goals > m.away_goals) { h.w++; a.l++; h.pts += 3 }
-    else if (m.home_goals < m.away_goals) { a.w++; h.l++; a.pts += 3 }
-    else { h.d++; a.d++; h.pts++; a.pts++ }
-  }
-
-  return [...rows.values()]
-    .map((r) => ({ ...r, gd: r.gf - r.ga }))
-    .sort((x, y) => y.pts - x.pts || y.gd - x.gd || y.gf - x.gf || x.team.name.localeCompare(y.team.name))
-}
-
-// One group's standings table, computed from its finished matches.
-function GroupTable({ gms, tmap }: { gms: Match[]; tmap: Record<string, Team> }) {
-  const teamIds = new Set<string>()
-  for (const m of gms) {
-    if (m.home_team_id) teamIds.add(m.home_team_id)
-    if (m.away_team_id) teamIds.add(m.away_team_id)
-  }
-  const groupTeams = [...teamIds].map((id) => tmap[id]).filter(Boolean)
-  const table = groupTable(groupTeams, gms)
-  return (
-    <table className="gtable">
-      <thead>
-        <tr>
-          <th className="t-team">Team</th>
-          <th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th>
-        </tr>
-      </thead>
-      <tbody>
-        {table.map((r, i) => (
-          <tr key={r.team.id} className={i < 2 ? 'qualifies' : ''}>
-            <td className="t-team">
-              <Flag code={r.team.code} name={r.team.name} />
-              <span className="t-name">{r.team.name}</span>
-            </td>
-            <td>{r.p}</td><td>{r.w}</td><td>{r.d}</td><td>{r.l}</td>
-            <td>{r.gf}</td><td>{r.ga}</td><td>{r.gd > 0 ? `+${r.gd}` : r.gd}</td>
-            <td className="t-pts">{r.pts}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  )
-}
 
 // Bucket fixtures by their (local) calendar date, in date order. A World Cup
 // "matchday" can straddle two calendar days, so we group by the real date rather

@@ -178,18 +178,38 @@ label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 4px; f
 .tab.on { background: var(--broadcast); color: var(--broadcast-ink); font-weight: 700; }
 
 /* ---- /fixtures: group tables + knockout fixtures ---- */
-.group-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.group-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
 .group-panel { display: flex; flex-direction: column; gap: 12px; }
 
-.gtable { width: 100%; border-collapse: collapse; font-size: 12px; }
-.gtable th { font-family: var(--mono); font-weight: 500; color: var(--muted); text-align: center; padding: 4px 5px; border-bottom: 1px solid var(--line); }
-.gtable td { text-align: center; padding: 6px 5px; border-bottom: 1px solid var(--line-soft); }
-.gtable th.t-team, .gtable td.t-team { text-align: left; }
-.gtable td.t-team { display: flex; align-items: center; gap: 8px; }
-.gtable .t-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.gtable td.t-pts { font-weight: 700; color: var(--fg); }
-.gtable tr.qualifies td.t-team { box-shadow: inset 3px 0 0 var(--broadcast); }
-.gtable tr.qualifies td:first-child { padding-left: 8px; }
+/* Shared stat table — the standings expand/collapse breakdown, reused for the fixtures
+   group tables. Self-contained (own fonts/colours) so it renders identically wherever
+   it's used; callers only vary the team-vs-numbers split (--bt-team) and column count. */
+.btable {
+  --bt-team: 45%;
+  --bt-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --bt-ui: 'Archivo', system-ui, sans-serif;
+  --bt-panel: #133527; --bt-muted: #84b29b; --bt-fg: #eafff3;
+  --bt-t1: #2bd47d; --bt-t2: #f5953d; --bt-t3: #d8394c; --bt-q: #d8ff3e;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.bt-head, .bt-row { display: grid; grid-template-columns: var(--bt-team) repeat(var(--bt-cols, 5), 1fr); align-items: center; column-gap: 6px; }
+.bt-head { font-family: var(--bt-mono); font-size: 9.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--bt-muted); padding: 0 12px 2px; }
+/* re-assert the header treatment on the stat/total cells, else the 13/15px data sizes leak in */
+.bt-head .bt-stat, .bt-head .bt-total { font-size: 9.5px; font-weight: 600; text-align: right; }
+.bt-head .bt-team { text-align: left; }
+.bt-row { background: var(--bt-panel); border-radius: 8px; padding: 7px 12px; border-left: 3px solid var(--bt-c, transparent); }
+.bt-row.t1 { --bt-c: var(--bt-t1); } .bt-row.t2 { --bt-c: var(--bt-t2); } .bt-row.t3 { --bt-c: var(--bt-t3); }
+.bt-row.q { --bt-c: var(--bt-q); }
+.bt-team { display: flex; align-items: center; gap: 8px; min-width: 0; }
+/* stacks the team name over the optional owner chip (StatTableRow.meta) */
+.bt-team-txt { display: flex; flex-direction: column; min-width: 0; gap: 1px; }
+.bt-name { font-family: var(--bt-ui); font-weight: 700; font-size: 13px; color: var(--bt-fg); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* owner overlay: a coloured dot in the drafter's manager colour + their name */
+.bt-owner { display: inline-flex; align-items: center; gap: 5px; font-family: var(--bt-ui); font-size: 10.5px; font-weight: 600; color: var(--bt-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bt-owner-dot { width: 8px; height: 8px; border-radius: 2.5px; background: var(--oc, var(--bt-muted)); flex: 0 0 auto; box-shadow: 0 0 0 1px rgba(0,0,0,.25); }
+.bt-stat { font-family: var(--bt-mono); font-size: 13px; font-weight: 700; color: var(--bt-muted); text-align: right; font-variant-numeric: tabular-nums; }
+.bt-total { font-family: var(--bt-mono); font-size: 15px; font-weight: 700; color: var(--bt-fg); text-align: right; font-variant-numeric: tabular-nums; }
+.btable .flag { width: 22px; height: 15px; border-radius: 3px; object-fit: cover; box-shadow: 0 0 0 1px rgba(255,255,255,.10); background: #19402f; flex: 0 0 auto; display: inline-block; }
 
 .fx-list { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line-soft); padding-top: 10px; }
 .fx-day-head { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
@@ -207,5 +227,5 @@ label { display: block; font-size: 12px; color: var(--muted); margin: 0 0 4px; f
 .ko-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 18px; }
 .ko-label { font-family: var(--mono); font-size: 12px; color: var(--muted); font-weight: 500; margin-bottom: 8px; }
 
-@media (max-width: 920px) { .group-grid { grid-template-columns: 1fr 1fr; } }
-@media (max-width: 600px) { .group-grid { grid-template-columns: 1fr; } }
+/* drop to one group per row early — the wide stat tables get cramped two-up below this */
+@media (max-width: 920px) { .group-grid { grid-template-columns: 1fr; } }
