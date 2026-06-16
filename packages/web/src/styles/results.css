@@ -54,8 +54,17 @@
 .results .ds-nav { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--text); background: var(--chip); padding: 7px 12px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--hairline); flex: 0 0 auto; }
 .results .ds-nav:hover:not(:disabled) { background: var(--panel-2); }
 .results .ds-nav:disabled { opacity: .3; cursor: not-allowed; }
-.results .ds-matches { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+.results .ds-matches { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 8px; }
 .results .ds-matches .gr-match { min-width: 266px; flex: 0 0 auto; }
+/* themed horizontal scrollbar — slim rounded pill in the pitch palette (chip fill +
+   hairline ring, matching the Prev/Next buttons), transparent track. */
+.results .ds-matches, .results .ko-scroll, .results .board-wrap { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--muted) 45%, transparent) transparent; }
+.results .ds-matches::-webkit-scrollbar, .results .ko-scroll::-webkit-scrollbar, .results .board-wrap::-webkit-scrollbar { height: 8px; }
+.results .ds-matches::-webkit-scrollbar-track, .results .ko-scroll::-webkit-scrollbar-track, .results .board-wrap::-webkit-scrollbar-track { background: transparent; }
+.results .ds-matches::-webkit-scrollbar-thumb, .results .ko-scroll::-webkit-scrollbar-thumb, .results .board-wrap::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 45%, transparent); border-radius: 999px; box-shadow: inset 0 0 0 1px var(--hairline-2); }
+.results .ds-matches::-webkit-scrollbar-thumb:hover, .results .ko-scroll::-webkit-scrollbar-thumb:hover, .results .board-wrap::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--muted) 65%, transparent); }
 @media (max-width: 760px) {
   /* no nested horizontal scroll on mobile — stack the day's matches full-width
      and let the carousel itself be swiped between days */
@@ -76,8 +85,8 @@
   .results .tabs .tab svg { flex: 0 0 auto; }
   .results .tab-panel { display: none; }
   .results[data-tab="league"] [data-panel="league"],
-  .results[data-tab="fixtures"] [data-panel="fixtures"],
-  .results[data-tab="results"] [data-panel="results"] { display: block; }
+  .results[data-tab="groups"] [data-panel="groups"],
+  .results[data-tab="fixtures"] [data-panel="fixtures"] { display: block; }
   /* first visible panel sits right under the tab bar: drop the .sec-head top margin so the
      tab bar's own 20px margin-bottom is the only gap (the two don't collapse — .tabs is
      inline-flex). The league panel nests its first .sec-head inside a <section>, so catch
@@ -89,9 +98,15 @@
 .results .sec-head { display: flex; align-items: baseline; gap: 12px; margin: 34px 0 16px; }
 .results .sec-head h2 { font-size: 14px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; margin: 0; color: var(--text); }
 .results .sec-sub { font-family: var(--mono); font-size: 12px; color: var(--muted); }
-.results .sec-toggle { margin-left: auto; font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .03em; color: var(--text);
-  background: var(--chip); border: none; padding: 6px 11px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--hairline); cursor: pointer; }
-.results .sec-toggle:hover { background: var(--panel-2); }
+/* segmented control — Totals|PPG (League) and Real|Fantasy (Groups) switches */
+.results .segctl { position: relative; margin-left: auto; display: inline-flex; gap: 2px; padding: 3px; background: var(--panel-2); border-radius: 999px; box-shadow: inset 0 0 0 1px var(--hairline); align-self: center; }
+/* sliding neutral fill — reads as secondary (not the tabs' broadcast lime) and glides
+   between the two equal-width segments on switch */
+.results .seg-ind { position: absolute; top: 3px; bottom: 3px; left: 3px; width: calc(50% - 4px); border-radius: 999px; background: var(--text); transition: transform .24s cubic-bezier(.4,0,.2,1); }
+.results .segctl[data-pos="1"] .seg-ind { transform: translateX(calc(100% + 2px)); }
+.results .seg { position: relative; z-index: 1; flex: 1 1 0; min-width: 64px; text-align: center; font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .03em; padding: 4px 13px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; transition: color .18s ease; }
+.results .seg:hover { color: var(--text); }
+.results .seg.on { color: var(--on-accent); }
 .results .empty { color: var(--muted); font-family: var(--mono); font-size: 13px; padding: 10px 0; }
 
 /* leaderboard */
@@ -193,19 +208,7 @@
    being yanked off in one frame, which would jolt the rows upward at the start. */
 .results .lb-breakdown { display: flex; flex-direction: column; gap: 4px; padding-top: 0; transition: padding-top .3s ease; }
 .results .lb-row.open .lb-breakdown { padding-top: 12px; }
-/* flag+name take the left 45%; the five stat columns (P/R/G/B/Pts) split the
-   remaining 55% into equal, evenly-spaced tracks so all five always show */
-.results .lb-bd-head, .results .lb-bd-row { display: grid; grid-template-columns: 45% repeat(5, 1fr); align-items: center; column-gap: 6px; }
-.results .lb-bd-head { font-family: var(--mono); font-size: 9.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 0 12px 2px; }
-/* the cells reuse the data-row classes, so re-assert the header treatment here or
-   the 13/15px value sizes leak in and the P/R/G/B/Pts labels render oversized */
-.results .lb-bd-head .lb-bd-stat, .results .lb-bd-head .lb-bd-total { font-size: 9.5px; font-weight: 600; text-align: right; }
-.results .lb-bd-row { background: var(--panel-2); border-radius: 8px; padding: 7px 12px; border-left: 3px solid var(--c, var(--hairline)); }
-.results .lb-bd-row.t1 { --c: var(--t1); } .results .lb-bd-row.t2 { --c: var(--t2); } .results .lb-bd-row.t3 { --c: var(--t3); }
-.results .lb-bd-team { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.results .lb-bd-name { font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.results .lb-bd-stat { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
-.results .lb-bd-total { font-family: var(--mono); font-size: 15px; font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; }
+/* the per-team breakdown itself is the shared <StatTable> (.btable in app.css) */
 @media (prefers-reduced-motion: reduce) { .results .lb-bd, .results .lb-breakdown { transition: none; } }
 @media (max-width: 760px) {
   /* matches-played moves up beside the name; the points/teams bar goes full width */
@@ -219,11 +222,18 @@
   .results .lb-hold { width: calc(var(--hcols-m, 3) * var(--flag-w) + (var(--hcols-m, 3) - 1) * 5px); }
 }
 
-/* group-stage results feed */
-.results .gr-groups { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-@media (max-width: 1080px) { .results .gr-groups { grid-template-columns: repeat(2, 1fr); } }
-@media (max-width: 720px) { .results .gr-groups { grid-template-columns: 1fr; } }
-.results .gr-grp { background: var(--panel); border: 1px solid var(--hairline); border-radius: 13px; padding: 14px 15px; }
+/* groups board — each real WC group: live standings table + that group's match feed */
+.results .grp-board { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+@media (max-width: 1080px) { .results .grp-board { grid-template-columns: 1fr; } }
+.results .grp-card { background: var(--panel); border: 1px solid var(--hairline); border-radius: 13px; padding: 14px 15px; }
+/* collapsible toggle splitting the table from the match feed below it (collapsed by default) */
+.results .grp-results-h { display: flex; align-items: center; gap: 7px; width: 100%; margin: 15px 0 0; padding: 0; background: 0; border: 0; cursor: pointer; font-family: var(--mono); font-weight: 700; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.results .grp-results-h:hover { color: var(--text); }
+.results .grp-results-h.open { margin-bottom: 9px; }
+.results .grp-chev { flex: 0 0 auto; transition: transform .15s ease; }
+.results .grp-results-h.open .grp-chev { transform: rotate(90deg); }
+/* match count sits to the right, de-emphasised */
+.results .grp-results-meta { margin-left: auto; letter-spacing: .04em; opacity: .75; }
 .results .gr-h { font-family: var(--mono); font-weight: 700; font-size: 13px; letter-spacing: .1em; color: var(--muted); margin-bottom: 11px; }
 .results .gr-h b { color: var(--text); font-size: 15px; }
 .results .gr-matches { display: flex; flex-direction: column; gap: 8px; }
@@ -366,9 +376,12 @@
   .results .ds-matches > .gr-match:nth-child(n+4) { animation-delay: .15s; }
   .results .ds-rel { animation: pop .3s ease both; }
 
-  /* results feed + tier reference cards rise in */
-  .results .gr-grp { animation: rise .45s ease both; }
+  /* group cards + tier reference rise in */
+  .results .grp-card { animation: rise .45s ease both; }
   .results .tier-band { animation: rise .4s ease both; }
+
+  /* group table re-keys on Real↔Fantasy switch → soft cross-fade of the new table */
+  .results .grp-tbl { animation: fade .3s ease both; }
 }
 
 /* hover micro-interactions — transform-only so the leader/you ring is untouched */

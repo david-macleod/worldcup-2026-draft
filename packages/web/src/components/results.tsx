@@ -5,8 +5,10 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react'
 import type React from 'react'
 import { Link } from '@tanstack/react-router'
-import type { LeagueView, Team } from '../lib/api'
-import { Flag } from './ui'
+import type { LeagueView, Match, Team } from '../lib/api'
+import { Flag, teamMap } from './ui'
+import { StatTable } from './StatTable'
+import { GroupTable, OwnerChip } from './GroupTable'
 
 const clsx = (...a: unknown[]) => a.filter(Boolean).join(' ')
 // rank-movement tooltip — change over the most recent completed matchday
@@ -139,9 +141,11 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
     <>
       <div className="sec-head">
         <h2>Standings</h2>
-        <button className="sec-toggle" onClick={() => setByPpg((v) => !v)}>
-          {byPpg ? 'Show total points' : 'Show points-per-game'}
-        </button>
+        <div className="segctl" role="group" aria-label="Standings metric" data-pos={byPpg ? 1 : 0}>
+          <span className="seg-ind" aria-hidden />
+          <button className={clsx('seg', !byPpg && 'on')} aria-pressed={!byPpg} onClick={() => setByPpg(false)}>Totals</button>
+          <button className={clsx('seg', byPpg && 'on')} aria-pressed={byPpg} onClick={() => setByPpg(true)}>PPG</button>
+        </div>
       </div>
       <div className="lb-legend">
         <span className="lg t1">Tier 1</span><span className="lg t2">Tier 2</span>
@@ -208,27 +212,20 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
               </span>
               <div className="lb-bd">
                 <div className="lb-breakdown">
-                  <div className="lb-bd-head">
-                    <span className="lb-bd-team">Team</span>
-                    <span className="lb-bd-stat" title="Matches played">P</span>
-                    <span className="lb-bd-stat" title="Result — win 3 / draw 1 / loss 0">R</span>
-                    <span className="lb-bd-stat" title="Goals — 1 per goal scored">G</span>
-                    <span className="lb-bd-stat" title="Bonus — upset bonus">B</span>
-                    <span className="lb-bd-total">Pts</span>
-                  </div>
-                  {ranked.map((s) => (
-                    <div className={clsx('lb-bd-row', `t${s.tier}`)} key={s.team.id}>
-                      <span className="lb-bd-team">
-                        <Flag code={s.team.code} name={s.team.name} />
-                        <b className="lb-bd-name">{s.team.name}</b>
-                      </span>
-                      <span className="lb-bd-stat">{playedByTeam[s.team.id] || 0}</span>
-                      <span className="lb-bd-stat">{s.points.result}</span>
-                      <span className="lb-bd-stat">{s.points.goals}</span>
-                      <span className="lb-bd-stat">{s.points.bonus}</span>
-                      <span className="lb-bd-total">{s.total}</span>
-                    </div>
-                  ))}
+                  <StatTable
+                    columns={[
+                      { label: 'P', title: 'Matches played' },
+                      { label: 'R', title: 'Result — win 3 / draw 1 / loss 0' },
+                      { label: 'G', title: 'Goals — 1 per goal scored' },
+                      { label: 'B', title: 'Bonus — upset bonus' },
+                    ]}
+                    totalLabel="Pts"
+                    rows={ranked.map((s) => ({
+                      id: s.team.id, code: s.team.code, name: s.team.name, accent: `t${s.tier}` as 't1' | 't2' | 't3',
+                      cells: [playedByTeam[s.team.id] || 0, s.points.result, s.points.goals, s.points.bonus],
+                      total: s.total,
+                    }))}
+                  />
                 </div>
               </div>
             </div>
@@ -308,33 +305,124 @@ function MatchCard({ m, owners, showTime }: { m: FeedMatch; owners: Owners; show
   )
 }
 
-function GroupResultsFeed({ groups, owners }: {
-  groups: Array<{ group: string; matches: FeedMatch[] }>; owners: Owners
-}) {
-  if (!groups.length) return <p className="empty">No results entered yet — they'll appear here as games are played.</p>
+// Draft-scoring group table — ranks the group's teams by fantasy points (R/G/B per
+// match, summed) instead of real-life W/D/L. Same shared <StatTable>; only the rows
+// and columns differ from the real-life GroupTable.
+function DraftGroupTable({ gms, tmap, owners }: { gms: Match[]; tmap: Record<string, Team>; owners: Owners }) {
+  type Row = { team: Team; p: number; r: number; g: number; b: number; total: number }
+  const acc = new Map<string, Row>()
+  const ensure = (id: string) => {
+    let row = acc.get(id)
+    if (!row) { row = { team: tmap[id], p: 0, r: 0, g: 0, b: 0, total: 0 }; acc.set(id, row) }
+    return row
+  }
+  for (const m of gms) {
+    const hId = m.home_team_id, aId = m.away_team_id
+    if (!hId || !aId || !tmap[hId] || !tmap[aId]) continue
+    ensure(hId); ensure(aId) // include every team in the group, even before it plays
+    if (m.status !== 'finished' || m.home_goals == null || m.away_goals == null) continue
+    const hTier = owners[hId]?.tier ?? null, aTier = owners[aId]?.tier ?? null
+    const hs = matchScore(m.home_goals, m.away_goals, hTier, aTier)
+    const as = matchScore(m.away_goals, m.home_goals, aTier, hTier)
+    const h = ensure(hId); h.p++; h.r += hs.result; h.g += hs.goals; h.b += hs.bonus; h.total += hs.total
+    const a = ensure(aId); a.p++; a.r += as.result; a.g += as.goals; a.b += as.bonus; a.total += as.total
+  }
+  const rows = [...acc.values()].sort((x, y) => y.total - x.total || x.team.name.localeCompare(y.team.name))
   return (
-    <div className="gr-groups">
-      {groups.map((gr) => (
-        <div className="gr-grp" key={gr.group}>
-          <div className="gr-h">Group <b>{gr.group}</b></div>
-          <div className="gr-matches">
-            {gr.matches.map((m, i) => <MatchCard key={i} m={m} owners={owners} />)}
-          </div>
+    <StatTable
+      teamWidth="40%"
+      columns={[
+        { label: 'P', title: 'Matches played' },
+        { label: 'R', title: 'Result — win 3 / draw 1 / loss 0' },
+        { label: 'G', title: 'Goals — 1 per goal scored' },
+        { label: 'B', title: 'Bonus — upset bonus' },
+      ]}
+      totalLabel="Pts"
+      rows={rows.map((r) => {
+        const o = owners[r.team.id]
+        return {
+          id: r.team.id, code: r.team.code, name: r.team.name,
+          accent: o ? (`t${o.tier}` as 't1' | 't2' | 't3') : null,
+          cells: [r.p, r.r, r.g, r.b], total: r.total,
+          meta: o ? <OwnerChip o={o} /> : undefined,
+        }
+      })}
+    />
+  )
+}
+
+// Groups tab — each real WC group as a card: the live group table (with each team's
+// drafter overlaid) followed by that group's match feed with fantasy scoring. Merges
+// what used to be a standalone "Results" feed into the group it belongs to. A toggle
+// swaps the table between real-life W/D/L standings and draft (fantasy) scoring.
+function GroupsBoard({ view, owners }: { view: LeagueView; owners: Owners }) {
+  const tmap = useMemo(() => teamMap(view.teams), [view.teams])
+  // raw group matches keyed by group letter — the standings table is computed from these
+  const rawByGroup = useMemo(() => {
+    const m: Record<string, Match[]> = {}
+    for (const mt of view.matches) {
+      if (mt.stage === 'group' && mt.grp) (m[mt.grp] ||= []).push(mt)
+    }
+    return m
+  }, [view.matches])
+  const groups = useMemo(() => groupResultsFeed(view), [view])
+  // the per-group match feed is collapsed by default — the table is the headline,
+  // the breakdown is on-demand (multiple groups may be open at once)
+  const [open, setOpen] = useState<Set<string>>(new Set())
+  const toggle = (g: string) => setOpen((s) => { const n = new Set(s); n.has(g) ? n.delete(g) : n.add(g); return n })
+  // table mode: real-life W/D/L standings vs draft (fantasy) scoring
+  const [byDraft, setByDraft] = useState(false)
+  if (!groups.length) return <p className="empty">No fixtures yet — groups appear once the schedule is seeded.</p>
+  return (
+    <>
+      <div className="sec-head">
+        <h2>Groups</h2>
+        <div className="segctl" role="group" aria-label="Standings scoring" data-pos={byDraft ? 1 : 0}>
+          <span className="seg-ind" aria-hidden />
+          <button className={clsx('seg', !byDraft && 'on')} aria-pressed={!byDraft} onClick={() => setByDraft(false)}>Real</button>
+          <button className={clsx('seg', byDraft && 'on')} aria-pressed={byDraft} onClick={() => setByDraft(true)}>Fantasy</button>
         </div>
-      ))}
-    </div>
+      </div>
+      <div className="grp-board">
+        {groups.map((gr) => {
+          const isOpen = open.has(gr.group)
+          const played = gr.matches.filter((m) => m.played).length
+          const gms = rawByGroup[gr.group] ?? []
+          return (
+            <div className="grp-card" key={gr.group}>
+              <div className="gr-h">Group <b>{gr.group}</b></div>
+              <div className="grp-tbl" key={byDraft ? 'fantasy' : 'real'}>
+                {byDraft
+                  ? <DraftGroupTable gms={gms} tmap={tmap} owners={owners} />
+                  : <GroupTable gms={gms} tmap={tmap} owners={owners} teamWidth="40%" />}
+              </div>
+              <button className={clsx('grp-results-h', isOpen && 'open')} aria-expanded={isOpen} onClick={() => toggle(gr.group)}>
+                <svg className="grp-chev" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M9 6l6 6-6 6" /></svg>
+                <span>Results</span>
+                <span className="grp-results-meta">{played}/{gr.matches.length}</span>
+              </button>
+              {isOpen && (
+                <div className="gr-matches">
+                  {gr.matches.map((m, i) => <MatchCard key={i} m={m} owners={owners} />)}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </>
   )
 }
 
 const TABS = [
   { id: 'league', label: 'League' },
+  { id: 'groups', label: 'Groups' },
   { id: 'fixtures', label: 'Fixtures' },
-  { id: 'results', label: 'Results' },
 ] as const
 type TabId = (typeof TABS)[number]['id']
 
-// Line icons for the mobile tab bar: trophy (League), calendar (Fixtures),
-// clipboard-check (Results). Inherit the tab's text colour via currentColor.
+// Line icons for the mobile tab bar: trophy (League), table-grid (Groups),
+// calendar (Fixtures). Inherit the tab's text colour via currentColor.
 function TabIcon({ id }: { id: TabId }) {
   const p = { viewBox: '0 0 24 24', width: 14, height: 14, fill: 'none', stroke: 'currentColor',
     strokeWidth: 2, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true }
@@ -342,11 +430,11 @@ function TabIcon({ id }: { id: TabId }) {
     <svg {...p}><path d="M8 4h8v5a4 4 0 0 1-8 0V4Z" /><path d="M8 6H5v1a3 3 0 0 0 3 3" />
       <path d="M16 6h3v1a3 3 0 0 1-3 3" /><path d="M12 13v3M9.5 20h5M10.5 16h3" /></svg>
   )
-  if (id === 'fixtures') return (
-    <svg {...p}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
+  if (id === 'groups') return (
+    <svg {...p}><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M3 9h18M3 14h18M9 4v16" /></svg>
   )
   return (
-    <svg {...p}><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9.5 4h5v2.5h-5z" /><path d="M8.5 13l2 2 4-4" /></svg>
+    <svg {...p}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
   )
 }
 
@@ -439,7 +527,6 @@ export function OverviewView({ view, highlight }: { view: LeagueView; highlight?
 }
 
 export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; homeHref?: ReactNode; highlight?: string }) {
-  const groups = useMemo(() => groupResultsFeed(view), [view])
   const owners = useMemo(() => buildOwners(view), [view])
   const days = useMemo(() => buildCarouselDays(view), [view])
   const [tab, setTab] = useState<TabId>('league')
@@ -494,9 +581,8 @@ export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; h
         </div>
       </div>
 
-      <div className="tab-panel" data-panel="results">
-        <div className="sec-head"><h2>Match results</h2><span className="sec-sub"><b>R</b> result · <b>G</b> goals · <b>B</b> upset bonus · total</span></div>
-        <GroupResultsFeed groups={groups} owners={owners} />
+      <div className="tab-panel" data-panel="groups">
+        <GroupsBoard view={view} owners={owners} />
       </div>
     </div>
   )
