@@ -62,12 +62,35 @@ export interface LeaderboardEntry {
   total: number
   advanced: number
   deepestStage: string
+  /** Rank change vs the previous matchday: +up / −down / 0 held; null = no prior matchday. */
+  delta: number | null
   squad: Array<{ teamId: string; points: TeamPoints }>
 }
 
 export interface Leaderboard {
   leaderboard: LeaderboardEntry[]
   perTeamPoints: Record<string, TeamPoints>
+}
+
+/** 11:00→11:00 UTC day bucket for a kickoff (matches the web day-strip grouping). null if undated. */
+function matchdayKey(kickoff: string | null | undefined): string | null {
+  if (!kickoff) return null
+  const ms = Date.parse(kickoff)
+  if (isNaN(ms)) return null
+  return new Date(ms - 11 * 3600_000).toISOString().slice(0, 10)
+}
+
+/** Per-team total points across a set of matches (the scoring loop, totals only). */
+function teamTotals(matches: MatchRow[], tierByTeam: Record<string, number>): Record<string, number> {
+  const totals: Record<string, number> = {}
+  for (const m of matches) {
+    if (m.status !== 'finished' || m.home_goals == null || m.away_goals == null) continue
+    const hTier = m.home_team_id ? tierByTeam[m.home_team_id] ?? null : null
+    const aTier = m.away_team_id ? tierByTeam[m.away_team_id] ?? null : null
+    if (m.home_team_id) totals[m.home_team_id] = (totals[m.home_team_id] || 0) + matchScore(m.home_goals, m.away_goals, hTier, aTier).total
+    if (m.away_team_id) totals[m.away_team_id] = (totals[m.away_team_id] || 0) + matchScore(m.away_goals, m.home_goals, aTier, hTier).total
+  }
+  return totals
 }
 
 function winnerOf(m: MatchRow): string | null {
@@ -163,8 +186,44 @@ export function computeLeaderboard(
     const advanced = squad.filter((x) => qualified.has(x.teamId)).length
     const deepest = squad.reduce((d, x) => Math.max(d, STAGE_ORD[x.points.stage] || 0), 0)
     const deepestStage = STAGE_LABEL[Object.keys(STAGE_ORD).find((k) => STAGE_ORD[k] === deepest) || 'Group']
-    return { managerId: m.id, name: m.name, color: m.color, seat: m.seat, total, advanced, deepestStage, squad }
+    return { managerId: m.id, name: m.name, color: m.color, seat: m.seat, total, advanced, deepestStage, delta: null as number | null, squad }
   }).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
+
+  // Rank movement — computed on read, never stored. A "matchday" is one 11:00→11:00 day
+  // bucket (same grouping as the fixtures strip) and only counts once COMPLETE (every match
+  // scheduled that day is finished). The in-progress day is ignored, so a lone straggler
+  // result can't reset everyone's arrow to nil. Movement runs from the end of the matchday
+  // BEFORE the most recent completed one up to the live standings; since both orderings are
+  // permutations of the same managers the deltas net to zero.
+  const dayFinished: Record<string, number> = {}
+  const dayTotal: Record<string, number> = {}
+  for (const m of matches) {
+    const k = matchdayKey(m.kickoff)
+    if (!k) continue
+    dayTotal[k] = (dayTotal[k] || 0) + 1
+    if (m.status === 'finished') dayFinished[k] = (dayFinished[k] || 0) + 1
+  }
+  const completeDays = Object.keys(dayTotal).filter((k) => dayFinished[k] === dayTotal[k]).sort()
+  const latestComplete = completeDays[completeDays.length - 1]
+  // reference day = the most recent day with results strictly before that completed matchday
+  const refDay = latestComplete
+    ? Object.keys(dayFinished).filter((d) => d < latestComplete).sort().pop()
+    : undefined
+  if (refDay) {
+    // standings through refDay; undated finished matches (knockouts w/o kickoff) always count
+    const refMatches = matches.filter((m) => {
+      if (m.status !== 'finished') return false
+      const k = matchdayKey(m.kickoff)
+      return k == null || k <= refDay
+    })
+    const refTotals = teamTotals(refMatches, tierByTeam)
+    const refRank: Record<string, number> = {}
+    managers
+      .map((m) => ({ id: m.id, name: m.name, total: (squads[m.id] || []).reduce((s, tid) => s + (refTotals[tid] || 0), 0) }))
+      .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
+      .forEach((x, i) => { refRank[x.id] = i })
+    leaderboard.forEach((e, i) => { e.delta = (refRank[e.managerId] ?? i) - i })
+  }
 
   return { leaderboard, perTeamPoints }
 }

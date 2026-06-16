@@ -42,6 +42,7 @@ export interface TeamPoints {
 export interface LeaderboardEntry {
   managerId: string; name: string; color: string; seat: number | null
   total: number; advanced: number; deepestStage: string
+  delta: number | null // rank change vs previous matchday: +up / −down / 0 held; null = none yet
   squad: Array<{ teamId: string; points: TeamPoints }>
 }
 export interface LeagueView {
