@@ -74,3 +74,59 @@ describe('computeLeaderboard (tiers derived from draft round)', () => {
     expect(leaderboard[0].managerId).toBe('m1')
   })
 })
+
+describe('computeLeaderboard — rank movement vs previous matchday (delta)', () => {
+  const teams = [team('a1'), team('a2'), team('a3'), team('a4')]
+  const managers: ManagerRow[] = [
+    { id: 'm1', league_id: 'L', name: 'Ann', token: 't1', seat: 0, color: '#fff' },
+    { id: 'm2', league_id: 'L', name: 'Bob', token: 't2', seat: 1, color: '#000' },
+  ]
+  const picks: PickRow[] = [
+    { id: 'p1', league_id: 'L', overall: 0, manager_id: 'm1', team_id: 'a1', created_at: '' },
+    { id: 'p2', league_id: 'L', overall: 1, manager_id: 'm2', team_id: 'a2', created_at: '' },
+  ]
+  const md1: MatchRow = {
+    id: 'G-A-1', stage: 'group', grp: 'A', home_team_id: 'a2', away_team_id: 'a4',
+    kickoff: '2026-06-11T15:00:00Z', home_goals: 1, away_goals: 0, home_pens: null, away_pens: null, status: 'finished',
+  } // Bob's a2 wins → Bob 4, Ann 0
+  const md2: MatchRow = {
+    id: 'G-A-2', stage: 'group', grp: 'A', home_team_id: 'a1', away_team_id: 'a3',
+    kickoff: '2026-06-15T15:00:00Z', home_goals: 5, away_goals: 0, home_pens: null, away_pens: null, status: 'finished',
+  } // Ann's a1 wins big → Ann 8, overtakes Bob
+
+  it('is null when only one matchday has finished (no prior table to compare)', () => {
+    const { leaderboard } = computeLeaderboard(teams, [md1], picks, managers)
+    expect(leaderboard.every((r) => r.delta === null)).toBe(true)
+  })
+
+  it('reports who moved up/down once a second matchday flips the order', () => {
+    const { leaderboard } = computeLeaderboard(teams, [md1, md2], picks, managers)
+    const ann = leaderboard.find((r) => r.managerId === 'm1')!
+    const bob = leaderboard.find((r) => r.managerId === 'm2')!
+    expect(leaderboard[0].managerId).toBe('m1') // Ann now leads
+    expect(ann.delta).toBe(1)  // up one place
+    expect(bob.delta).toBe(-1) // down one place
+  })
+
+  it('ignores an in-progress day: a lone straggler result does not reset the arrows', () => {
+    // md1 (day1): Bob's a2 wins → Bob leads. md2 (day2, COMPLETE): Ann's a1 wins big → Ann
+    // jumps to 1st. day3 is in-progress — one finished match (neither team owned) + one still
+    // scheduled — so the arrows must still reflect Ann's day-2 climb, not collapse to "held".
+    const day2: MatchRow = {
+      id: 'G-A-2', stage: 'group', grp: 'A', home_team_id: 'a1', away_team_id: 'a3',
+      kickoff: '2026-06-12T15:00:00Z', home_goals: 5, away_goals: 0, home_pens: null, away_pens: null, status: 'finished',
+    }
+    const day3done: MatchRow = {
+      id: 'G-A-3', stage: 'group', grp: 'A', home_team_id: 'a4', away_team_id: 'a3',
+      kickoff: '2026-06-13T15:00:00Z', home_goals: 1, away_goals: 0, home_pens: null, away_pens: null, status: 'finished',
+    }
+    const day3pending: MatchRow = {
+      id: 'G-A-4', stage: 'group', grp: 'A', home_team_id: 'a3', away_team_id: 'a4',
+      kickoff: '2026-06-13T18:00:00Z', home_goals: null, away_goals: null, home_pens: null, away_pens: null, status: 'scheduled',
+    }
+    const { leaderboard } = computeLeaderboard(teams, [md1, day2, day3done, day3pending], picks, managers)
+    const ann = leaderboard.find((r) => r.managerId === 'm1')!
+    expect(leaderboard[0].managerId).toBe('m1')
+    expect(ann.delta).toBe(1) // still ▲1 from the last COMPLETE matchday, not 0
+  })
+})

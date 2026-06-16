@@ -9,6 +9,8 @@ import type { LeagueView, Team } from '../lib/api'
 import { Flag } from './ui'
 
 const clsx = (...a: unknown[]) => a.filter(Boolean).join(' ')
+// rank-movement tooltip — change over the most recent completed matchday
+const moveLabel = (d: number) => d > 0 ? `Up ${d} over the last matchday` : d < 0 ? `Down ${-d} over the last matchday` : 'No change over the last matchday'
 const tierOf = (idx: number) => Math.min(3, Math.floor(idx / 2) + 1)
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -164,7 +166,17 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
               role="button" tabIndex={0} aria-expanded={isOpen}
               onClick={() => toggle(row.managerId)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(row.managerId) } }}>
-              <span className="lb-place">{i + 1}</span>
+              <span className="lb-place">
+                <b className="lb-rank">{i + 1}</b>
+                {/* movement vs the previous matchday; tied to the total-points order, so hidden in PPG view */}
+                {!byPpg && row.delta != null && (
+                  <i className={clsx('lb-move', row.delta > 0 ? 'up' : row.delta < 0 ? 'down' : 'eq')} title={moveLabel(row.delta)}>
+                    {row.delta === 0
+                      ? '–'
+                      : <><span className="lb-move-ar" aria-hidden>{row.delta > 0 ? '▲' : '▼'}</span>{Math.abs(row.delta)}</>}
+                  </i>
+                )}
+              </span>
               <span className="lb-name">{row.name}{row.managerId === highlight ? ' · you' : ''}</span>
               <div className="lb-pts"><b>{byPpg ? ppg.toFixed(2) : row.total}</b><span>{byPpg ? 'PPG' : 'PTS'}</span></div>
               <div className="lb-trk">

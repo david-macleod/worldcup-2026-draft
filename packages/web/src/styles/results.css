@@ -99,7 +99,7 @@
 /* gap: 0 12px (not just column-gap) — a global .lb-row in app.css sets gap:12px, whose
    row-gap would otherwise leak in and add 12px of dead space below the collapsed
    breakdown row. Open-state separation comes from .lb-breakdown's padding-top instead. */
-.results .lb-row { display: grid; grid-template-columns: 22px 80px 56px 1fr auto; align-items: center; gap: 0 12px;
+.results .lb-row { display: grid; grid-template-columns: 34px 80px 56px 1fr auto; align-items: center; gap: 0 12px;
   background: var(--panel); border: 1px solid var(--hairline); border-radius: 12px; padding: 10px 16px; cursor: pointer; }
 /* top three get metallic medal treatment (gold/silver/bronze) on both the ring and
    place number. The ring is a gradient drawn by a masked ::before pseudo so it follows
@@ -115,14 +115,24 @@
 .results .lb-row.bronze::before { background-image: var(--grad-bronze); }
 .results .lb-row.you { background: color-mix(in srgb, var(--clk) 9%, var(--panel)); }
 /* pin children to columns so collapsing the bar on expand doesn't reflow the header */
-.results .lb-place { grid-column: 1; font-family: var(--mono); font-size: 22px; font-weight: 700; color: var(--muted); }
+.results .lb-place { grid-column: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+.results .lb-rank { font-family: var(--mono); font-size: 21px; font-weight: 700; line-height: 1; color: var(--fg); opacity: .9; font-variant-numeric: tabular-nums; }
+/* rank movement — a compact tinted pill under the place number */
+.results .lb-move { display: inline-flex; align-items: center; gap: 1px; font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+  line-height: 1; font-style: normal; font-variant-numeric: tabular-nums; padding: 2px 5px; border-radius: 999px;
+  color: var(--muted); background: color-mix(in srgb, var(--muted) 12%, transparent); }
+.results .lb-move .lb-move-ar { font-size: 7px; line-height: 1; transform: translateY(-.5px); }
+.results .lb-move.up { color: var(--up); background: color-mix(in srgb, var(--up) 15%, transparent); }
+.results .lb-move.down { color: var(--down); background: color-mix(in srgb, var(--down) 15%, transparent); }
+/* held position — faint, no fill */
+.results .lb-move.eq { background: none; padding: 0; color: var(--muted-2); opacity: .55; }
 /* place number: clip the same metallic gradient to the glyphs */
-.results .lb-row.gold .lb-place, .results .lb-row.silver .lb-place, .results .lb-row.bronze .lb-place {
+.results .lb-row.gold .lb-rank, .results .lb-row.silver .lb-rank, .results .lb-row.bronze .lb-rank {
   background-size: 200% 200%; background-position: var(--shine, 0%) 50%;
   -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
-.results .lb-row.gold   .lb-place { background-image: var(--grad-gold); }
-.results .lb-row.silver .lb-place { background-image: var(--grad-silver); }
-.results .lb-row.bronze .lb-place { background-image: var(--grad-bronze); }
+.results .lb-row.gold   .lb-rank { background-image: var(--grad-gold); }
+.results .lb-row.silver .lb-rank { background-image: var(--grad-silver); }
+.results .lb-row.bronze .lb-rank { background-image: var(--grad-bronze); }
 /* shimmer: slide the light highlight across the ring + number, staggered per place */
 @keyframes lb-shine { 0%, 100% { --shine: 0%; } 50% { --shine: 100%; } }
 @property --shine { syntax: "<percentage>"; inherits: true; initial-value: 0%; }
@@ -199,7 +209,7 @@
 @media (prefers-reduced-motion: reduce) { .results .lb-bd, .results .lb-breakdown { transition: none; } }
 @media (max-width: 760px) {
   /* matches-played moves up beside the name; the points/teams bar goes full width */
-  .results .lb-row { grid-template-columns: 20px auto auto 1fr; row-gap: 8px; }
+  .results .lb-row { grid-template-columns: 32px auto auto 1fr; row-gap: 8px; }
   .results .lb-place { grid-column: 1; grid-row: 1; }
   .results .lb-name { grid-column: 2; grid-row: 1; }
   .results .lb-mp { grid-column: 3; grid-row: 1; padding-left: 0; }
