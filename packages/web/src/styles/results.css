@@ -110,9 +110,16 @@
 /* the two standings controls sit together on the right and wrap on narrow screens */
 .results .std-controls { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
 .results .std-controls .segctl { margin-left: 0; }
-/* round filter — same pill control, static fill on the active segment (no slider, N segments) */
-.results .segctl.rounds .seg { min-width: 0; padding: 4px 11px; }
+/* round filter — same pill control, static fill on the active segment (no slider, N segments).
+   flex:0 0 auto so each segment hugs its label and the fill always covers the text. */
+.results .segctl.rounds .seg { flex: 0 0 auto; min-width: 0; padding: 4px 11px; }
 .results .segctl.rounds .seg.on { background: var(--text); }
+@media (max-width: 760px) {
+  /* both sliders sit side by side on their own row, under the Standings heading */
+  .results .sec-head { flex-wrap: wrap; row-gap: 10px; }
+  .results .std-controls { margin-left: 0; width: 100%; flex-wrap: nowrap; justify-content: flex-start; gap: 8px; }
+  .results .segctl.rounds .seg { padding: 4px 9px; }
+}
 .results .empty { color: var(--muted); font-family: var(--mono); font-size: 13px; padding: 10px 0; }
 
 /* leaderboard */
