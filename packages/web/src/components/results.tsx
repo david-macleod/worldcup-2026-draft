@@ -101,20 +101,71 @@ function groupResultsFeed(view: LeagueView): Array<{ group: string; matches: Fee
   return Object.keys(byGroup).sort().map((g) => ({ group: g, matches: byGroup[g] }))
 }
 
+// Round of each match: within a group, the first two fixtures (by kickoff) are round 1,
+// next two round 2, last two round 3 — i.e. each team's Nth game. Knockout games → 'ko'.
+function roundOfMatches(view: LeagueView): Record<string, number | 'ko'> {
+  const r: Record<string, number | 'ko'> = {}
+  const byGroup: Record<string, Match[]> = {}
+  for (const m of view.matches) {
+    if (m.stage === 'group' && m.grp) (byGroup[m.grp] ||= []).push(m)
+    else r[m.id] = 'ko'
+  }
+  for (const g of Object.keys(byGroup)) {
+    byGroup[g].sort((a, b) => (a.kickoff || a.id).localeCompare(b.kickoff || b.id))
+    byGroup[g].forEach((m, i) => { r[m.id] = Math.floor(i / 2) + 1 })
+  }
+  return r
+}
+
+// Recompute the leaderboard from ONLY one round's matches (isolated). Mirrors the API's
+// matchScore/tier logic; movement deltas don't apply to a filtered view (delta: null).
+function recomputeRound(view: LeagueView, round: 1 | 2 | 3 | 'ko', roundMap: Record<string, number | 'ko'>): LeagueView['leaderboard'] {
+  const n = view.league.nManagers
+  const tierByTeam: Record<string, number> = {}
+  for (const p of view.picks) tierByTeam[p.teamId] = tierOf(Math.floor(p.overall / n))
+  const teamTotal: Record<string, number> = {}
+  for (const m of view.matches) {
+    if (roundMap[m.id] !== round || m.status !== 'finished' || m.home_goals == null || m.away_goals == null) continue
+    const hT = m.home_team_id ? tierByTeam[m.home_team_id] ?? null : null
+    const aT = m.away_team_id ? tierByTeam[m.away_team_id] ?? null : null
+    if (m.home_team_id) teamTotal[m.home_team_id] = (teamTotal[m.home_team_id] || 0) + matchScore(m.home_goals, m.away_goals, hT, aT).total
+    if (m.away_team_id) teamTotal[m.away_team_id] = (teamTotal[m.away_team_id] || 0) + matchScore(m.away_goals, m.home_goals, aT, hT).total
+  }
+  const squads: Record<string, string[]> = {}
+  for (const p of [...view.picks].sort((a, b) => a.overall - b.overall)) (squads[p.managerId] ||= []).push(p.teamId)
+  return view.managers.map((mgr) => {
+    const squad = (squads[mgr.id] || []).map((teamId) => ({
+      teamId,
+      points: { teamId, total: teamTotal[teamId] || 0, tier: tierByTeam[teamId] ?? null, result: 0, goals: 0, bonus: 0, stage: 'Group' },
+    }))
+    const total = squad.reduce((s, x) => s + x.points.total, 0)
+    return { managerId: mgr.id, name: mgr.name, color: mgr.color, seat: mgr.seat, total, advanced: 0, deepestStage: 'Group', delta: null, squad }
+  }).sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
+}
+
 function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight?: string }) {
   const teamById = useMemo(() => Object.fromEntries(view.teams.map((t) => [t.id, t])), [view.teams])
-  // finished-match appearances per team (a team that has played twice counts 2)
+  const [byPpg, setByPpg] = useState(false)
+  const [round, setRound] = useState<'all' | 1 | 2 | 3 | 'ko'>('all')
+  // round filter: 'all' = everything; otherwise isolate just that round's matches
+  const roundMap = useMemo(() => roundOfMatches(view), [view.matches])
+  const filteredMatches = useMemo(
+    () => (round === 'all' ? view.matches : view.matches.filter((m) => roundMap[m.id] === round)),
+    [view.matches, round, roundMap])
+  // finished-match appearances per team within the filter (a team playing twice counts 2)
   const playedByTeam = useMemo(() => {
     const c: Record<string, number> = {}
-    for (const m of view.matches) {
+    for (const m of filteredMatches) {
       if (m.status !== 'finished') continue
       if (m.home_team_id) c[m.home_team_id] = (c[m.home_team_id] || 0) + 1
       if (m.away_team_id) c[m.away_team_id] = (c[m.away_team_id] || 0) + 1
     }
     return c
-  }, [view.matches])
-  const lb = view.leaderboard
-  const [byPpg, setByPpg] = useState(false)
+  }, [filteredMatches])
+  // 'all' uses the server leaderboard (with movement deltas); a round recomputes client-side
+  const lb = useMemo(
+    () => (round === 'all' ? view.leaderboard : recomputeRound(view, round, roundMap)),
+    [view, round, roundMap])
   // which rows are expanded into the vertical per-team breakdown (multiple allowed)
   const [open, setOpen] = useState<Set<string>>(new Set())
   const toggle = (id: string) => setOpen((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -141,10 +192,19 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
     <>
       <div className="sec-head">
         <h2>Standings</h2>
-        <div className="segctl" role="group" aria-label="Standings metric" data-pos={byPpg ? 1 : 0}>
-          <span className="seg-ind" aria-hidden />
-          <button className={clsx('seg', !byPpg && 'on')} aria-pressed={!byPpg} onClick={() => setByPpg(false)}>Totals</button>
-          <button className={clsx('seg', byPpg && 'on')} aria-pressed={byPpg} onClick={() => setByPpg(true)}>PPG</button>
+        <div className="std-controls">
+          <div className="segctl" role="group" aria-label="Standings metric" data-pos={byPpg ? 1 : 0}>
+            <span className="seg-ind" aria-hidden />
+            <button className={clsx('seg', !byPpg && 'on')} aria-pressed={!byPpg} onClick={() => setByPpg(false)}>Totals</button>
+            <button className={clsx('seg', byPpg && 'on')} aria-pressed={byPpg} onClick={() => setByPpg(true)}>PPG</button>
+          </div>
+          <div className="segctl rounds" role="group" aria-label="Round">
+            {(['all', 1, 2, 3, 'ko'] as const).map((r) => (
+              <button key={r} className={clsx('seg', round === r && 'on')} aria-pressed={round === r} onClick={() => setRound(r)}>
+                {r === 'all' ? 'All' : r === 'ko' ? 'KO' : r}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       <div className="lb-legend">

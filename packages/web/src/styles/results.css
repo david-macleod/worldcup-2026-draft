@@ -107,6 +107,12 @@
 .results .seg { position: relative; z-index: 1; flex: 1 1 0; min-width: 64px; text-align: center; font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .03em; padding: 4px 13px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; transition: color .18s ease; }
 .results .seg:hover { color: var(--text); }
 .results .seg.on { color: var(--on-accent); }
+/* the two standings controls sit together on the right and wrap on narrow screens */
+.results .std-controls { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
+.results .std-controls .segctl { margin-left: 0; }
+/* round filter — same pill control, static fill on the active segment (no slider, N segments) */
+.results .segctl.rounds .seg { min-width: 0; padding: 4px 11px; }
+.results .segctl.rounds .seg.on { background: var(--text); }
 .results .empty { color: var(--muted); font-family: var(--mono); font-size: 13px; padding: 10px 0; }
 
 /* leaderboard */
