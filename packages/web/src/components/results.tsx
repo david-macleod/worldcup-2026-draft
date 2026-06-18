@@ -416,8 +416,8 @@ function GroupsBoard({ view, owners }: { view: LeagueView; owners: Owners }) {
 
 const TABS = [
   { id: 'league', label: 'League' },
-  { id: 'groups', label: 'Groups' },
   { id: 'fixtures', label: 'Fixtures' },
+  { id: 'groups', label: 'Groups' },
 ] as const
 type TabId = (typeof TABS)[number]['id']
 
