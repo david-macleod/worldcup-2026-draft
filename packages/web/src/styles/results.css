@@ -127,7 +127,7 @@
 /* gap: 0 12px (not just column-gap) — a global .lb-row in app.css sets gap:12px, whose
    row-gap would otherwise leak in and add 12px of dead space below the collapsed
    breakdown row. Open-state separation comes from .lb-breakdown's padding-top instead. */
-.results .lb-row { display: grid; grid-template-columns: 34px 80px 96px 1fr auto; align-items: center; gap: 0 12px;
+.results .lb-row { display: grid; grid-template-columns: 34px 80px 86px 1fr auto; align-items: center; gap: 0 12px;
   background: var(--panel); border: 1px solid var(--hairline); border-radius: 12px; padding: 10px 16px; cursor: pointer; }
 /* top three get metallic medal treatment (gold/silver/bronze) on both the ring and
    place number. The ring is a gradient drawn by a masked ::before pseudo so it follows
@@ -235,7 +235,7 @@
   .results .lb-place { grid-column: 1; grid-row: 1; }
   .results .lb-name { grid-column: 2; grid-row: 1; }
   .results .lb-mp { grid-column: 3; grid-row: 1; padding-left: 0; }
-  .results .lb-pts { grid-column: 4; grid-row: 1; justify-self: end; justify-content: flex-end; gap: 8px; }
+  .results .lb-pts { grid-column: 4; grid-row: 1; justify-self: end; justify-content: flex-end; gap: 12px; }
   .results .lb-trk { grid-column: 1 / -1; grid-row: 2; }
   /* yet-to-score wraps to 2 rows (≤3 cols); reserved width snaps with the global max */
   .results .lb-hold { width: calc(var(--hcols-m, 3) * var(--flag-w) + (var(--hcols-m, 3) - 1) * 5px); }
