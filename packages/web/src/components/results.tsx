@@ -242,7 +242,10 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
                 )}
               </span>
               <span className="lb-name">{row.name}{row.managerId === highlight ? ' · you' : ''}</span>
-              <div className="lb-pts"><b>{byPpg ? ppg.toFixed(2) : row.total}</b><span>{byPpg ? 'PPG' : 'PTS'}</span></div>
+              <div className="lb-pts">
+                <span className="lb-pts-cell"><b>{byPpg ? ppg.toFixed(2) : row.total}</b><span className="lb-pts-lbl">{byPpg ? 'PPG' : 'PTS'}</span></span>
+                <span className="lb-pts-cell lb-pts-2nd"><b>{byPpg ? row.total : ppg.toFixed(2)}</b><span className="lb-pts-lbl">{byPpg ? 'PTS' : 'PPG'}</span></span>
+              </div>
               <div className="lb-trk">
                 <div className="lb-track">
                   <div className="lb-scoring">
