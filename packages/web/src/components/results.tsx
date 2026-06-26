@@ -2,7 +2,7 @@
 // league view (matches/teams/picks). Shows the leaderboard + the group-stage
 // results feed (per-match tier-based scoring breakdown). Group tables and the
 // knockout bracket are intentionally not shown.
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { createContext, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
 import type React from 'react'
 import { Link } from '@tanstack/react-router'
 import type { LeagueView, Match, Team } from '../lib/api'
@@ -51,6 +51,71 @@ function buildOwners(view: LeagueView): Owners {
   return owners
 }
 
+// Teams mathematically OUT of the World Cup — used to fade their flags everywhere.
+// Out = lost a knockout tie, OR can no longer qualify from the group: last in a
+// finished group (a last-place team can never be a best-3rd), and once every group
+// is complete, anyone outside the 32 qualifiers (top-2 per group + 8 best thirds).
+function eliminatedTeams(view: LeagueView): Set<string> {
+  const out = new Set<string>()
+  const fin = (m: Match) => m.status === 'finished' && m.home_goals != null && m.away_goals != null
+  // knockout losers
+  for (const m of view.matches) {
+    if (m.stage === 'group' || !fin(m) || !m.home_team_id || !m.away_team_id) continue
+    let winner: string | null = null
+    if (m.home_goals! > m.away_goals!) winner = m.home_team_id
+    else if (m.away_goals! > m.home_goals!) winner = m.away_team_id
+    else if (m.home_pens != null && m.away_pens != null) winner = m.home_pens > m.away_pens ? m.home_team_id : m.away_team_id
+    if (winner) out.add(winner === m.home_team_id ? m.away_team_id! : m.home_team_id!)
+  }
+  // group standings
+  const groups: Record<string, Team[]> = {}
+  for (const t of view.teams) if (t.grp) (groups[t.grp] ||= []).push(t)
+  const gms: Record<string, Match[]> = {}
+  for (const m of view.matches) if (m.stage === 'group' && m.grp) (gms[m.grp] ||= []).push(m)
+  const keys = Object.keys(groups)
+  const done: Record<string, boolean> = {}
+  for (const g of keys) done[g] = (gms[g]?.length ?? 0) > 0 && gms[g].every(fin)
+  const table = (g: string) => {
+    const st: Record<string, { id: string; pts: number; gd: number; gf: number }> = {}
+    for (const t of groups[g]) st[t.id] = { id: t.id, pts: 0, gd: 0, gf: 0 }
+    for (const m of gms[g] ?? []) {
+      if (!fin(m) || !st[m.home_team_id!] || !st[m.away_team_id!]) continue
+      const h = st[m.home_team_id!], a = st[m.away_team_id!]
+      h.gf += m.home_goals!; a.gf += m.away_goals!
+      h.gd += m.home_goals! - m.away_goals!; a.gd += m.away_goals! - m.home_goals!
+      if (m.home_goals! > m.away_goals!) h.pts += 3
+      else if (m.away_goals! > m.home_goals!) a.pts += 3
+      else { h.pts++; a.pts++ }
+    }
+    return Object.values(st).sort((x, y) => y.pts - x.pts || y.gd - x.gd || y.gf - x.gf)
+  }
+  const allDone = keys.length > 0 && keys.every((g) => done[g])
+  if (allDone) {
+    const qualified = new Set<string>()
+    const thirds: { id: string; pts: number; gd: number; gf: number }[] = []
+    for (const g of keys) {
+      const tb = table(g)
+      if (tb[0]) qualified.add(tb[0].id)
+      if (tb[1]) qualified.add(tb[1].id)
+      if (tb[2]) thirds.push(tb[2])
+    }
+    thirds.sort((x, y) => y.pts - x.pts || y.gd - x.gd || y.gf - x.gf)
+    thirds.slice(0, 8).forEach((t) => qualified.add(t.id))
+    for (const t of view.teams) if (!qualified.has(t.id)) out.add(t.id)
+  } else {
+    for (const g of keys) {
+      if (!done[g]) continue
+      const tb = table(g)
+      if (tb[3]) out.add(tb[3].id) // last in a finished group can never be a best-3rd
+    }
+  }
+  return out
+}
+
+// Shared "definitely out" set, provided once per view so every flag can fade.
+const ElimCtx = createContext<Set<string>>(new Set())
+const useElim = () => useContext(ElimCtx)
+
 // ── Tier reference — every drafted team grouped by tier, banded in tier colour ──
 function tiersOf(view: LeagueView): Record<number, Team[]> {
   const n = view.league.nManagers
@@ -64,6 +129,7 @@ function tiersOf(view: LeagueView): Record<number, Team[]> {
 }
 function TiersPanel({ view }: { view: LeagueView }) {
   const byTier = useMemo(() => tiersOf(view), [view])
+  const elim = useElim()
   if (!view.picks.length) return null
   return (
     <div className="tiers-panel">
@@ -73,7 +139,7 @@ function TiersPanel({ view }: { view: LeagueView }) {
           <span className="tier-label">Tier {tier}</span>
           <div className="tier-teams">
             {byTier[tier].map((t) => (
-              <span className="tier-team" key={t.id} title={t.name}><Flag code={t.code} name={t.name} />{t.abbr}</span>
+              <span className={clsx('tier-team', elim.has(t.id) && 'out')} key={t.id} title={t.name}><Flag code={t.code} name={t.name} />{t.abbr}</span>
             ))}
           </div>
         </div>
@@ -145,6 +211,7 @@ function recomputeRound(view: LeagueView, round: 1 | 2 | 3 | 'ko', roundMap: Rec
 
 function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight?: string }) {
   const teamById = useMemo(() => Object.fromEntries(view.teams.map((t) => [t.id, t])), [view.teams])
+  const elim = useElim()
   const [byPpg, setByPpg] = useState(false)
   const [round, setRound] = useState<'all' | 1 | 2 | 3 | 'ko'>('all')
   // round filter: 'all' = everything; otherwise isolate just that round's matches
@@ -253,7 +320,7 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
                       {scoring.map((s) => (
                         <div className={clsx('lb-seg', `t${s.tier}`)} key={s.team.id} style={{ flexGrow: s.total }}
                           title={`${s.team.name} · ${s.total} pts · pick ${s.round}`}>
-                          <span className="lb-seg-flag"><Flag code={s.team.code} name={s.team.name} /></span>
+                          <span className="lb-seg-flag"><Flag code={s.team.code} name={s.team.name} faded={elim.has(s.team.id)} /></span>
                           <span className="lb-seg-block"><span className="lb-seg-n">{s.total}</span></span>
                         </div>
                       ))}
@@ -263,7 +330,7 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
                     <div className={clsx('lb-hold', !holding.length && 'empty')}>
                       {holding.map((s) => (
                         <span className="lb-hold-fl" key={s.team.id} title={`${s.team.name} · 0 pts · pick ${s.round}`}>
-                          <Flag code={s.team.code} name={s.team.name} />
+                          <Flag code={s.team.code} name={s.team.name} faded={elim.has(s.team.id)} />
                         </span>
                       ))}
                     </div>
@@ -303,12 +370,13 @@ function ResultRow({ team, gf, ga, owner, oppTier, win, played = true }: {
   team: Team; gf: number; ga: number; owner?: { name: string; tier: number }; oppTier: number | null; win: boolean; played?: boolean
 }) {
   const o = owner || { name: '—', tier: 1 }
+  const isOut = useElim().has(team.id)
   // Not played yet: same row format (flag, tier border, owner) minus score + R/G/B + total.
   if (!played) {
     return (
       <div className="rr">
         <div className={clsx('rr-box', `t${o.tier}`)}>
-          <Flag code={team.code} name={team.name} />
+          <Flag code={team.code} name={team.name} faded={isOut} />
           <span className="rr-abbr">{team.abbr}</span>
         </div>
         <span className="rr-owner">{o.name}</span>
@@ -319,7 +387,7 @@ function ResultRow({ team, gf, ga, owner, oppTier, win, played = true }: {
   return (
     <div className={clsx('rr', win && 'win')}>
       <div className={clsx('rr-box', `t${o.tier}`)}>
-        <Flag code={team.code} name={team.name} />
+        <Flag code={team.code} name={team.name} faded={isOut} />
         <span className="rr-abbr">{team.abbr}</span>
         <span className="rr-score">{gf}</span>
       </div>
@@ -574,7 +642,9 @@ function DayStrip({ days, owners }: { days: CDay[]; owners: Owners }) {
 export function OverviewView({ view, highlight }: { view: LeagueView; highlight?: string }) {
   const owners = useMemo(() => buildOwners(view), [view])
   const days = useMemo(() => buildCarouselDays(view), [view])
+  const elim = useMemo(() => eliminatedTeams(view), [view])
   return (
+    <ElimCtx.Provider value={elim}>
     <div className="results">
       <div className="hero">
         <Link to="/l/$leagueId" params={{ leagueId: view.league.id }} className="hero-globe" title="Back to standings">🌍</Link>
@@ -586,6 +656,7 @@ export function OverviewView({ view, highlight }: { view: LeagueView; highlight?
       <DayStrip days={days} owners={owners} />
       <section><StandingsLeaderboard view={view} highlight={highlight} /></section>
     </div>
+    </ElimCtx.Provider>
   )
 }
 
@@ -593,10 +664,12 @@ export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; h
   const owners = useMemo(() => buildOwners(view), [view])
   const days = useMemo(() => buildCarouselDays(view), [view])
   const [tab, setTab] = useState<TabId>('league')
+  const elim = useMemo(() => eliminatedTeams(view), [view])
 
   // Tabs are mobile-only (CSS-gated): on desktop every panel is shown stacked, on
   // mobile the tab bar appears and `data-tab` toggles which panel is visible.
   return (
+    <ElimCtx.Provider value={elim}>
     <div className="results" data-tab={tab}>
       <div className="hero">
         <Link to="/l/$leagueId/overview" params={{ leagueId: view.league.id }} className="hero-globe" title="Open overview">🌍</Link>
@@ -648,5 +721,6 @@ export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; h
         <GroupsBoard view={view} owners={owners} />
       </div>
     </div>
+    </ElimCtx.Provider>
   )
 }

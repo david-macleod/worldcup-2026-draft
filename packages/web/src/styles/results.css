@@ -274,7 +274,7 @@
 .results .rr:not(.win) { opacity: .92; }
 .results .rr-owner { flex: 1; font-weight: 700; font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .results .rr-stats { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
-.results .rs { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--text); display: flex; align-items: baseline; gap: 1px; }
+.results .rs { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--text); opacity: .6; display: flex; align-items: baseline; gap: 1px; }
 .results .rs i { font-style: normal; font-size: 8.5px; font-weight: 700; color: var(--muted); }
 .results .rr-total { position: relative; font-family: var(--mono); font-size: 14px; font-weight: 700; color: #fff; background: #3b82f6; border-radius: 6px; padding: 3px 9px; min-width: 26px; text-align: center; margin-left: 3px; cursor: default; }
 .results .rr-total.zero { background: var(--chip); color: var(--muted); }
@@ -355,6 +355,11 @@
 .results .tier-teams { flex: 1; display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px 8px; }
 .results .tier-team { display: inline-flex; align-items: center; gap: 4px; font-family: var(--mono); font-size: 10px; font-weight: 600; color: var(--muted); }
 .results .tier-team .flag { width: 18px; height: 12px; }
+/* eliminated team in the tier list: fade flag + name together */
+.results .tier-team.out { opacity: .4; }
+.results .tier-team.out .flag { filter: grayscale(.6); }
+/* eliminated team's flag anywhere else (squad bar, hold cluster, result rows) */
+.results .flag.faded { opacity: .4; filter: grayscale(.6); }
 /* mobile: stack the tier label above the flags so the grid gets the full width */
 @media (max-width: 760px) {
   .results .tier-band { flex-direction: column; gap: 6px; }
