@@ -52,9 +52,10 @@ function buildOwners(view: LeagueView): Owners {
 }
 
 // Teams mathematically OUT of the World Cup — used to fade their flags everywhere.
-// Out = lost a knockout tie, OR can no longer qualify from the group: last in a
-// finished group (a last-place team can never be a best-3rd), and once every group
-// is complete, anyone outside the 32 qualifiers (top-2 per group + 8 best thirds).
+// Out = lost a knockout tie, OR can no longer qualify from the group: already guaranteed
+// to finish bottom of its group (a last-place team can never be a best-3rd) — including
+// mid-group, as soon as it's mathematically certain rather than once the group finishes —
+// and once every group is complete, anyone outside the 32 qualifiers (top-2 + 8 best thirds).
 function eliminatedTeams(view: LeagueView): Set<string> {
   const out = new Set<string>()
   const fin = (m: Match) => m.status === 'finished' && m.home_goals != null && m.away_goals != null
@@ -76,18 +77,30 @@ function eliminatedTeams(view: LeagueView): Set<string> {
   const done: Record<string, boolean> = {}
   for (const g of keys) done[g] = (gms[g]?.length ?? 0) > 0 && gms[g].every(fin)
   const table = (g: string) => {
-    const st: Record<string, { id: string; pts: number; gd: number; gf: number }> = {}
-    for (const t of groups[g]) st[t.id] = { id: t.id, pts: 0, gd: 0, gf: 0 }
+    const st: Record<string, { id: string; pts: number; gd: number; gf: number; played: number }> = {}
+    for (const t of groups[g]) st[t.id] = { id: t.id, pts: 0, gd: 0, gf: 0, played: 0 }
     for (const m of gms[g] ?? []) {
       if (!fin(m) || !st[m.home_team_id!] || !st[m.away_team_id!]) continue
       const h = st[m.home_team_id!], a = st[m.away_team_id!]
       h.gf += m.home_goals!; a.gf += m.away_goals!
       h.gd += m.home_goals! - m.away_goals!; a.gd += m.away_goals! - m.home_goals!
+      h.played++; a.played++
       if (m.home_goals! > m.away_goals!) h.pts += 3
       else if (m.away_goals! > m.home_goals!) a.pts += 3
       else { h.pts++; a.pts++ }
     }
     return Object.values(st).sort((x, y) => y.pts - x.pts || y.gd - x.gd || y.gf - x.gf)
+  }
+  // Out the moment elimination is mathematically certain, not only once the group is
+  // fully played: a team guaranteed to finish bottom (≥3 others already have more points
+  // than its best achievable total — 3 per remaining group game) can never be a best-3rd.
+  // Each group team plays 3 group games. Catches the latest teams knocked out mid-group.
+  for (const g of keys) {
+    const tb = table(g)
+    for (const y of tb) {
+      const yMax = y.pts + 3 * (3 - y.played)
+      if (tb.filter((x) => x.id !== y.id && x.pts > yMax).length >= 3) out.add(y.id)
+    }
   }
   const allDone = keys.length > 0 && keys.every((g) => done[g])
   if (allDone) {
