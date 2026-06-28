@@ -22,15 +22,21 @@ export interface MatchScore {
   total: number
 }
 
-/** Points a team earns in one match. tier/oppTier: 1 (best)..3 (worst), or null if undrafted. */
-export function matchScore(gf: number, ga: number, tier: number | null, oppTier: number | null): MatchScore {
+/**
+ * Points a team earns in one match. tier/oppTier: 1 (best)..3 (worst), or null if undrafted.
+ * gf/ga are the FINAL score (after extra time in knockouts) — they decide win/draw/loss and
+ * whether defeat was avoided. goals90 is the goals scored in the first 90' only, which is all
+ * that counts for GOAL points and the per-goal upset bonus; it defaults to gf for group games
+ * and any match that didn't go to extra time.
+ */
+export function matchScore(gf: number, ga: number, tier: number | null, oppTier: number | null, goals90: number = gf): MatchScore {
   const result = gf > ga ? 3 : gf === ga ? 1 : 0
-  const goals = gf
+  const goals = goals90
   let bonus = 0
   const avoidedDefeat = gf >= ga
   if (avoidedDefeat && tier != null && oppTier != null && oppTier < tier) {
     const diff = tier - oppTier // opponent is this many tiers above (better): 1 or 2
-    bonus = diff * (1 + gf) // flat upset (diff) + per-goal upset (diff each)
+    bonus = diff * (1 + goals90) // flat upset (diff) + per-goal upset (diff each, 90' goals only)
   }
   return { result, goals, bonus, total: result + goals + bonus }
 }
@@ -87,8 +93,9 @@ function teamTotals(matches: MatchRow[], tierByTeam: Record<string, number>): Re
     if (m.status !== 'finished' || m.home_goals == null || m.away_goals == null) continue
     const hTier = m.home_team_id ? tierByTeam[m.home_team_id] ?? null : null
     const aTier = m.away_team_id ? tierByTeam[m.away_team_id] ?? null : null
-    if (m.home_team_id) totals[m.home_team_id] = (totals[m.home_team_id] || 0) + matchScore(m.home_goals, m.away_goals, hTier, aTier).total
-    if (m.away_team_id) totals[m.away_team_id] = (totals[m.away_team_id] || 0) + matchScore(m.away_goals, m.home_goals, aTier, hTier).total
+    const hG90 = m.home_g90 ?? m.home_goals, aG90 = m.away_g90 ?? m.away_goals
+    if (m.home_team_id) totals[m.home_team_id] = (totals[m.home_team_id] || 0) + matchScore(m.home_goals, m.away_goals, hTier, aTier, hG90).total
+    if (m.away_team_id) totals[m.away_team_id] = (totals[m.away_team_id] || 0) + matchScore(m.away_goals, m.home_goals, aTier, hTier, aG90).total
   }
   return totals
 }
@@ -157,12 +164,13 @@ export function computeLeaderboard(
     if (m.status !== 'finished' || m.home_goals == null || m.away_goals == null) continue
     const hTier = m.home_team_id ? tierByTeam[m.home_team_id] ?? null : null
     const aTier = m.away_team_id ? tierByTeam[m.away_team_id] ?? null : null
+    const hG90 = m.home_g90 ?? m.home_goals, aG90 = m.away_g90 ?? m.away_goals
     if (m.home_team_id && perTeamPoints[m.home_team_id]) {
-      const s = matchScore(m.home_goals, m.away_goals, hTier, aTier)
+      const s = matchScore(m.home_goals, m.away_goals, hTier, aTier, hG90)
       const p = perTeamPoints[m.home_team_id]; p.result += s.result; p.goals += s.goals; p.bonus += s.bonus; p.total += s.total
     }
     if (m.away_team_id && perTeamPoints[m.away_team_id]) {
-      const s = matchScore(m.away_goals, m.home_goals, aTier, hTier)
+      const s = matchScore(m.away_goals, m.home_goals, aTier, hTier, aG90)
       const p = perTeamPoints[m.away_team_id]; p.result += s.result; p.goals += s.goals; p.bonus += s.bonus; p.total += s.total
     }
   }

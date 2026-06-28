@@ -9,6 +9,7 @@ import type { LeagueView, Match, Team } from '../lib/api'
 import { Flag, teamMap } from './ui'
 import { StatTable } from './StatTable'
 import { GroupTable, OwnerChip } from './GroupTable'
+import { Bracket } from './Bracket'
 
 const clsx = (...a: unknown[]) => a.filter(Boolean).join(' ')
 // rank-movement tooltip — change over the most recent completed matchday
@@ -27,14 +28,16 @@ function fmtTime(iso: string): string {
 type Owners = Record<string, { name: string; color: string; tier: number }>
 
 // Per-match scoring — identical to the API's matchScore (services/scoring.ts).
-// tier/oppTier: 1 (best)..3 (worst), or null if undrafted.
-function matchScore(gf: number, ga: number, tier: number | null, oppTier: number | null) {
+// tier/oppTier: 1 (best)..3 (worst), or null if undrafted. gf/ga are the FINAL score
+// (decide result + avoided-defeat); goals90 is goals in 90' only (goal points + per-goal
+// bonus), defaulting to gf for groups and any match that didn't go to extra time.
+function matchScore(gf: number, ga: number, tier: number | null, oppTier: number | null, goals90: number = gf) {
   const result = gf > ga ? 3 : gf === ga ? 1 : 0
-  const goals = gf
+  const goals = goals90
   let bonus = 0
   if (gf >= ga && tier != null && oppTier != null && oppTier < tier) {
     const diff = tier - oppTier
-    bonus = diff * (1 + gf)
+    bonus = diff * (1 + goals90)
   }
   return { result, goals, bonus, total: result + goals + bonus }
 }
@@ -161,7 +164,7 @@ function TiersPanel({ view }: { view: LeagueView }) {
   )
 }
 
-interface FeedMatch { a: Team; b: Team; ga: number | null; gb: number | null; played: boolean; kickoff: string | null }
+interface FeedMatch { a: Team; b: Team; ga: number | null; gb: number | null; ga90: number | null; gb90: number | null; played: boolean; kickoff: string | null }
 function groupResultsFeed(view: LeagueView): Array<{ group: string; matches: FeedMatch[] }> {
   const teamById = Object.fromEntries(view.teams.map((t) => [t.id, t]))
   const byGroup: Record<string, Array<FeedMatch & { sort: string }>> = {}
@@ -172,6 +175,7 @@ function groupResultsFeed(view: LeagueView): Array<{ group: string; matches: Fee
     const played = m.status === 'finished' && m.home_goals != null && m.away_goals != null
     ;(byGroup[m.grp] ||= []).push({
       a, b, ga: played ? m.home_goals : null, gb: played ? m.away_goals : null,
+      ga90: played ? m.home_g90 ?? m.home_goals : null, gb90: played ? m.away_g90 ?? m.away_goals : null,
       played, kickoff: m.kickoff, sort: m.kickoff || m.id,
     })
   }
@@ -207,8 +211,9 @@ function recomputeRound(view: LeagueView, round: 1 | 2 | 3 | 'ko', roundMap: Rec
     if (roundMap[m.id] !== round || m.status !== 'finished' || m.home_goals == null || m.away_goals == null) continue
     const hT = m.home_team_id ? tierByTeam[m.home_team_id] ?? null : null
     const aT = m.away_team_id ? tierByTeam[m.away_team_id] ?? null : null
-    if (m.home_team_id) teamTotal[m.home_team_id] = (teamTotal[m.home_team_id] || 0) + matchScore(m.home_goals, m.away_goals, hT, aT).total
-    if (m.away_team_id) teamTotal[m.away_team_id] = (teamTotal[m.away_team_id] || 0) + matchScore(m.away_goals, m.home_goals, aT, hT).total
+    const hG90 = m.home_g90 ?? m.home_goals, aG90 = m.away_g90 ?? m.away_goals
+    if (m.home_team_id) teamTotal[m.home_team_id] = (teamTotal[m.home_team_id] || 0) + matchScore(m.home_goals, m.away_goals, hT, aT, hG90).total
+    if (m.away_team_id) teamTotal[m.away_team_id] = (teamTotal[m.away_team_id] || 0) + matchScore(m.away_goals, m.home_goals, aT, hT, aG90).total
   }
   const squads: Record<string, string[]> = {}
   for (const p of [...view.picks].sort((a, b) => a.overall - b.overall)) (squads[p.managerId] ||= []).push(p.teamId)
@@ -379,8 +384,8 @@ function StandingsLeaderboard({ view, highlight }: { view: LeagueView; highlight
   )
 }
 
-function ResultRow({ team, gf, ga, owner, oppTier, win, played = true }: {
-  team: Team; gf: number; ga: number; owner?: { name: string; tier: number }; oppTier: number | null; win: boolean; played?: boolean
+function ResultRow({ team, gf, ga, gf90, owner, oppTier, win, played = true }: {
+  team: Team; gf: number; ga: number; gf90?: number; owner?: { name: string; tier: number }; oppTier: number | null; win: boolean; played?: boolean
 }) {
   const o = owner || { name: '—', tier: 1 }
   const isOut = useElim().has(team.id)
@@ -396,7 +401,7 @@ function ResultRow({ team, gf, ga, owner, oppTier, win, played = true }: {
       </div>
     )
   }
-  const s = matchScore(gf, ga, owner?.tier ?? null, oppTier)
+  const s = matchScore(gf, ga, owner?.tier ?? null, oppTier, gf90 ?? gf)
   return (
     <div className={clsx('rr', win && 'win')}>
       <div className={clsx('rr-box', `t${o.tier}`)}>
@@ -443,8 +448,8 @@ function MatchCard({ m, owners, showTime }: { m: FeedMatch; owners: Owners; show
   const bTier = owners[m.b.id]?.tier ?? null
   return (
     <div className="gr-match">
-      <ResultRow team={m.a} gf={m.ga!} ga={m.gb!} owner={owners[m.a.id]} oppTier={bTier} win={m.ga! > m.gb!} />
-      <ResultRow team={m.b} gf={m.gb!} ga={m.ga!} owner={owners[m.b.id]} oppTier={aTier} win={m.gb! > m.ga!} />
+      <ResultRow team={m.a} gf={m.ga!} ga={m.gb!} gf90={m.ga90 ?? undefined} owner={owners[m.a.id]} oppTier={bTier} win={m.ga! > m.gb!} />
+      <ResultRow team={m.b} gf={m.gb!} ga={m.ga!} gf90={m.gb90 ?? undefined} owner={owners[m.b.id]} oppTier={aTier} win={m.gb! > m.ga!} />
     </div>
   )
 }
@@ -595,7 +600,7 @@ function buildCarouselDays(view: LeagueView): CDay[] {
     if (isNaN(ms)) continue
     const played = m.status === 'finished' && m.home_goals != null && m.away_goals != null
     const key = new Date(ms - 11 * 3600_000).toISOString().slice(0, 10)
-    ;(byKey[key] ||= []).push({ a, b, ga: played ? m.home_goals : null, gb: played ? m.away_goals : null, played, kickoff: m.kickoff })
+    ;(byKey[key] ||= []).push({ a, b, ga: played ? m.home_goals : null, gb: played ? m.away_goals : null, ga90: played ? m.home_g90 ?? m.home_goals : null, gb90: played ? m.away_g90 ?? m.away_goals : null, played, kickoff: m.kickoff })
   }
   return Object.keys(byKey).sort().map((key) => {
     const startMs = Date.parse(`${key}T11:00:00Z`)
@@ -731,6 +736,8 @@ export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; h
       </div>
 
       <div className="tab-panel" data-panel="groups">
+        <div className="sec-head"><h2>Knockout bracket</h2></div>
+        <Bracket matches={view.matches} teams={view.teams} tierOf={(id) => owners[id]?.tier} ownerOf={(id) => owners[id]?.name} />
         <GroupsBoard view={view} owners={owners} />
       </div>
     </div>

@@ -10,6 +10,7 @@ import { newId } from '../lib/id'
 import {
   seatForOverall, picksFor, validateLeagueSize, N_ROUNDS, MIN_MANAGERS, MAX_MANAGERS,
 } from '../lib/snake'
+import { applyBracket } from '../services/bracket'
 
 export const adminRoutes = new Hono<{ Bindings: Env }>()
 adminRoutes.use('*', adminAuth)
@@ -206,31 +207,39 @@ adminRoutes.post('/leagues/import', async (c) => {
   }, 201)
 })
 
-// POST /api/admin/matches/:id/result — enter/correct a scoreline (and assign knockout teams).
+// POST /api/admin/matches/:id/result — enter/correct a scoreline.
+// Body: h90/a90 = goals at 90' (always required — drives GOAL points). h120/a120 = final
+// score after extra time (optional; omit if the match didn't go to ET). home_pens/away_pens
+// for a knockout decided on penalties. The stored final (home_goals/away_goals) is h120 if
+// given else h90, and is what decides win/draw/loss + who advances. Knockout teams are
+// derived from the bracket, so none are passed or required here.
 adminRoutes.post('/matches/:id/result', async (c) => {
   const id = c.req.param('id')
   type ResultBody = {
-    home_goals?: number; away_goals?: number; home_pens?: number; away_pens?: number
-    home_team_id?: string; away_team_id?: string
+    h90?: number; a90?: number; h120?: number; a120?: number; home_pens?: number; away_pens?: number
+    // legacy single-score fields (group entry / older clients)
+    home_goals?: number; away_goals?: number
   }
   const body = await c.req.json<ResultBody>().catch(() => ({} as ResultBody))
   const match = await getMatch(c.env.DB, id)
   if (!match) return c.json({ error: 'match not found' }, 404)
-  if (typeof body.home_goals !== 'number' || typeof body.away_goals !== 'number') {
-    return c.json({ error: 'home_goals and away_goals (numbers) required' }, 400)
+
+  const h90 = body.h90 ?? body.home_goals
+  const a90 = body.a90 ?? body.away_goals
+  if (typeof h90 !== 'number' || typeof a90 !== 'number') {
+    return c.json({ error: 'h90 and a90 (90-minute goals, numbers) required' }, 400)
   }
+  const wentToET = typeof body.h120 === 'number' && typeof body.a120 === 'number'
+  const homeFinal = wentToET ? body.h120! : h90
+  const awayFinal = wentToET ? body.a120! : a90
+  // penalties only matter when the final score is level in a knockout
+  const drawn = homeFinal === awayFinal && match.stage !== 'group'
 
-  // Knockout fixtures may need their teams assigned as the bracket fills.
-  const homeTeam = body.home_team_id ?? match.home_team_id
-  const awayTeam = body.away_team_id ?? match.away_team_id
-  if (!homeTeam || !awayTeam) return c.json({ error: 'match has no teams assigned; pass home_team_id/away_team_id' }, 400)
-
-  const pens = body.home_goals === body.away_goals && match.stage !== 'group'
   await c.env.DB.prepare(
-    'UPDATE matches SET home_team_id=?, away_team_id=?, home_goals=?, away_goals=?, home_pens=?, away_pens=?, status=? WHERE id=?',
+    'UPDATE matches SET home_goals=?, away_goals=?, home_g90=?, away_g90=?, home_pens=?, away_pens=?, status=? WHERE id=?',
   ).bind(
-    homeTeam, awayTeam, body.home_goals, body.away_goals,
-    pens ? (body.home_pens ?? null) : null, pens ? (body.away_pens ?? null) : null,
+    homeFinal, awayFinal, h90, a90,
+    drawn ? (body.home_pens ?? null) : null, drawn ? (body.away_pens ?? null) : null,
     'finished', id,
   ).run()
 
@@ -284,8 +293,9 @@ adminRoutes.patch('/managers/:id', async (c) => {
   return c.json({ ok: true })
 })
 
-// GET /api/admin/matches — the shared tournament grid for result entry.
+// GET /api/admin/matches — the shared tournament grid for result entry. Knockout
+// matchups are filled in from the bracket so each row shows who actually plays.
 adminRoutes.get('/matches', async (c) => {
-  const matches = await allMatches(c.env.DB)
-  return c.json({ matches })
+  const [teams, raw] = await Promise.all([allTeams(c.env.DB), allMatches(c.env.DB)])
+  return c.json({ matches: applyBracket(teams, raw) })
 })

@@ -34,6 +34,7 @@ export interface Match {
   home_team_id: string | null; away_team_id: string | null
   kickoff: string | null
   home_goals: number | null; away_goals: number | null
+  home_g90: number | null; away_g90: number | null
   home_pens: number | null; away_pens: number | null; status: string
 }
 export interface TeamPoints {

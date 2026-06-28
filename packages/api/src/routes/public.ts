@@ -1,6 +1,7 @@
 import { Hono } from 'hono'
 import type { Env } from '../db/types'
 import { buildLeagueView } from '../services/league-view'
+import { applyBracket } from '../services/bracket'
 import { allTeams, allMatches } from '../db'
 
 // Public, no-auth read model for a league: standings, squads, results feed.
@@ -15,6 +16,6 @@ publicRoutes.get('/leagues/:id', async (c) => {
 // The whole tournament: 48 teams + every fixture. Drives the public /fixtures
 // page, which renders group tables and the knockout bracket.
 publicRoutes.get('/fixtures', async (c) => {
-  const [teams, matches] = await Promise.all([allTeams(c.env.DB), allMatches(c.env.DB)])
-  return c.json({ teams, matches })
+  const [teams, raw] = await Promise.all([allTeams(c.env.DB), allMatches(c.env.DB)])
+  return c.json({ teams, matches: applyBracket(teams, raw) })
 })

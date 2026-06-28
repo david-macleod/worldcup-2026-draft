@@ -4,11 +4,9 @@ import { Link } from '@tanstack/react-router'
 import { apiFetch, type FixturesView, type Match, type Team } from '../lib/api'
 import { Flag, teamMap } from '../components/ui'
 import { GroupTable } from '../components/GroupTable'
+import { Bracket } from '../components/Bracket'
 
 const KO_STAGES = ['R32', 'R16', 'QF', 'SF', 'Final'] as const
-const KO_LABEL: Record<string, string> = {
-  R32: 'Round of 32', R16: 'Round of 16', QF: 'Quarter-finals', SF: 'Semi-finals', Final: 'Final',
-}
 // Local kickoff time, with single-digit AM hours zero-padded (9:00 AM -> 09:00 AM;
 // PM and 10/11/12 AM are left as-is).
 function fmtTime(d: Date): string {
@@ -156,18 +154,7 @@ export function Fixtures() {
           {hasKnockouts && (
             <div className="panel">
               <h2>Knockouts</h2>
-              <div className="ko-grid">
-                {KO_STAGES.map((s) => {
-                  const sms = matches.filter((m) => m.stage === s)
-                  if (!sms.length) return null
-                  return (
-                    <div className="ko-stage" key={s}>
-                      <h3 className="ko-label">{KO_LABEL[s]}</h3>
-                      <FixtureDays matches={sms} tmap={tmap} />
-                    </div>
-                  )
-                })}
-              </div>
+              <Bracket matches={matches} teams={teams} />
             </div>
           )}
         </>

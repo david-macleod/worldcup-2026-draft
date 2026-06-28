@@ -33,6 +33,9 @@ export interface MatchRow {
   kickoff: string | null
   home_goals: number | null
   away_goals: number | null
+  /** Goals in the first 90' only (knockout goal scoring). NULL = same as the final score. */
+  home_g90: number | null
+  away_g90: number | null
   home_pens: number | null
   away_pens: number | null
   status: 'scheduled' | 'finished'

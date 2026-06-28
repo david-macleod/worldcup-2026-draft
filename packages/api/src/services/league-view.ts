@@ -6,18 +6,22 @@ import {
   getLeague, managersOf, picksOf, allTeams, allMatches,
 } from '../db'
 import { computeLeaderboard } from './scoring'
+import { applyBracket } from './bracket'
 
 export async function buildLeagueView(db: D1Database, leagueId: string) {
   const league = await getLeague(db, leagueId)
   if (!league) return null
 
-  const [managers, picks, teams, matches] = await Promise.all([
+  const [managers, picks, teams, rawMatches] = await Promise.all([
     managersOf(db, leagueId),
     picksOf(db, leagueId),
     allTeams(db),
     allMatches(db),
   ])
 
+  // Knockout matchups are derived from the standings, not stored — fill them in so both
+  // the scoring loop and the returned fixtures know who plays in each bracket slot.
+  const matches = applyBracket(teams, rawMatches)
   const { leaderboard, perTeamPoints } = computeLeaderboard(teams, matches, picks, managers)
 
   // seat -> manager id, for board rendering

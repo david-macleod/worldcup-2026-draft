@@ -298,31 +298,57 @@ function MatchResults() {
 }
 
 function MatchRow({ m, onSaved }: { m: Match; onSaved: () => void }) {
-  const [hg, setHg] = useState(m.home_goals ?? '')
-  const [ag, setAg] = useState(m.away_goals ?? '')
+  const isKO = m.stage !== 'group'
+  // 90' score is the source for goal points; for knockouts it's stored in *_g90 (falling
+  // back to the final score for matches that didn't go to extra time).
+  const wentToET = m.home_g90 != null && (m.home_goals !== m.home_g90 || m.away_goals !== m.away_g90)
+  const [h90, setH90] = useState<number | ''>(m.home_g90 ?? m.home_goals ?? '')
+  const [a90, setA90] = useState<number | ''>(m.away_g90 ?? m.away_goals ?? '')
+  // extra-time (final) score — only knockouts, only if it went to ET
+  const [h120, setH120] = useState<number | ''>(wentToET ? m.home_goals ?? '' : '')
+  const [a120, setA120] = useState<number | ''>(wentToET ? m.away_goals ?? '' : '')
+  const [hp, setHp] = useState<number | ''>(m.home_pens ?? '')
+  const [ap, setAp] = useState<number | ''>(m.away_pens ?? '')
   const [err, setErr] = useState('')
-  const knockoutNoTeams = m.stage !== 'group' && (!m.home_team_id || !m.away_team_id)
+  const koNoTeams = isKO && (!m.home_team_id || !m.away_team_id)
+
   const save = useMutation({
-    mutationFn: () => apiFetch(`/admin/matches/${m.id}/result`, {
-      admin: true, method: 'POST', body: JSON.stringify({ home_goals: Number(hg), away_goals: Number(ag) }),
-    }),
+    mutationFn: () => {
+      const body: Record<string, number> = { h90: Number(h90), a90: Number(a90) }
+      if (isKO && h120 !== '' && a120 !== '') { body.h120 = Number(h120); body.a120 = Number(a120) }
+      if (isKO && hp !== '' && ap !== '') { body.home_pens = Number(hp); body.away_pens = Number(ap) }
+      return apiFetch(`/admin/matches/${m.id}/result`, { admin: true, method: 'POST', body: JSON.stringify(body) })
+    },
     onSuccess: () => { setErr(''); onSaved() },
     onError: (e: Error) => setErr(e.message),
   })
+  const num = (v: number | '', set: (n: number | '') => void, w = 44) => (
+    <input style={{ width: w }} value={v} onChange={(e) => set(e.target.value === '' ? '' : Number(e.target.value))} placeholder="–" />
+  )
   return (
-    <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
       <span className="pill">{m.stage === 'group' ? `Grp ${m.grp}` : m.stage} {m.id}</span>
-      <span style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 6, fontSize: 13, width: 340 }}>
+      <span style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 6, fontSize: 13, width: 320 }}>
         <TeamName id={m.home_team_id} side="home" />
         <b style={{ opacity: .5 }}>v</b>
         <TeamName id={m.away_team_id} side="away" />
       </span>
-      <input style={{ width: 56 }} value={hg} onChange={(e) => setHg(e.target.value)} placeholder="–" />
-      <input style={{ width: 56 }} value={ag} onChange={(e) => setAg(e.target.value)} placeholder="–" />
-      <button className="btn sm" disabled={save.isPending || knockoutNoTeams || hg === '' || ag === ''} onClick={() => save.mutate()}>
+      <span className="row" style={{ gap: 4, alignItems: 'center' }}>
+        <span className="muted" style={{ fontSize: 10 }}>{isKO ? '90′' : ''}</span>
+        {num(h90, setH90)}{num(a90, setA90)}
+      </span>
+      {isKO && (
+        <span className="row" style={{ gap: 4, alignItems: 'center' }}>
+          <span className="muted" style={{ fontSize: 10 }}>ET</span>
+          {num(h120, setH120)}{num(a120, setA120)}
+          <span className="muted" style={{ fontSize: 10 }}>pens</span>
+          {num(hp, setHp, 36)}{num(ap, setAp, 36)}
+        </span>
+      )}
+      <button className="btn sm" disabled={save.isPending || koNoTeams || h90 === '' || a90 === ''} onClick={() => save.mutate()}>
         {m.status === 'finished' ? 'update' : 'save'}
       </button>
-      {knockoutNoTeams && <span className="muted" style={{ fontSize: 11 }}>assign teams first</span>}
+      {koNoTeams && <span className="muted" style={{ fontSize: 11 }}>teams not decided yet</span>}
       {err && <span className="err">{err}</span>}
     </div>
   )

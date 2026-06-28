@@ -30,6 +30,18 @@ describe('matchScore (tier-based)', () => {
   it('undrafted opponent (null tier): no upset bonus', () => {
     expect(matchScore(2, 0, 3, null)).toEqual({ result: 3, goals: 2, bonus: 0, total: 5 })
   })
+  // Knockouts: result/avoided-defeat use the FINAL (120') score; goals (and per-goal
+  // bonus) use 90' goals only. The 5th arg is goals90.
+  it('KO won in ET 2-1 (1-1 at 90): WIN from final, but only the one 90-min goal counts', () => {
+    expect(matchScore(2, 1, 2, 2, 1)).toEqual({ result: 3, goals: 1, bonus: 0, total: 4 })
+  })
+  it('KO level after 120 (pens): both DRAW; goals from 90 only', () => {
+    expect(matchScore(1, 1, 2, 2, 1)).toEqual({ result: 1, goals: 1, bonus: 0, total: 2 })
+  })
+  it('KO upset bonus uses the 90-min goal count: tier3 beats tier1, ET goal excluded', () => {
+    // final 2-1 (win, avoided defeat), but only 1 goal in 90' → bonus = 2×(1+1)=4
+    expect(matchScore(2, 1, 3, 1, 1)).toEqual({ result: 3, goals: 1, bonus: 4, total: 8 })
+  })
 })
 
 function team(id: string, grp = 'A', rank = 10): TeamRow {
@@ -55,7 +67,7 @@ describe('computeLeaderboard (tiers derived from draft round)', () => {
   // a3 (tier3) beats a1 (tier1) 2-0 → big upset
   const matches: MatchRow[] = [{
     id: 'G-A-1', stage: 'group', grp: 'A', home_team_id: 'a3', away_team_id: 'a1',
-    kickoff: '2026-06-11T15:00:00Z', home_goals: 2, away_goals: 0, home_pens: null, away_pens: null, status: 'finished',
+    kickoff: '2026-06-11T15:00:00Z', home_goals: 2, away_goals: 0, home_g90: null, away_g90: null, home_pens: null, away_pens: null, status: 'finished',
   }]
 
   it('assigns tiers from the round each team was drafted', () => {
@@ -87,11 +99,11 @@ describe('computeLeaderboard — rank movement vs previous matchday (delta)', ()
   ]
   const md1: MatchRow = {
     id: 'G-A-1', stage: 'group', grp: 'A', home_team_id: 'a2', away_team_id: 'a4',
-    kickoff: '2026-06-11T15:00:00Z', home_goals: 1, away_goals: 0, home_pens: null, away_pens: null, status: 'finished',
+    kickoff: '2026-06-11T15:00:00Z', home_goals: 1, away_goals: 0, home_g90: null, away_g90: null, home_pens: null, away_pens: null, status: 'finished',
   } // Bob's a2 wins → Bob 4, Ann 0
   const md2: MatchRow = {
     id: 'G-A-2', stage: 'group', grp: 'A', home_team_id: 'a1', away_team_id: 'a3',
-    kickoff: '2026-06-15T15:00:00Z', home_goals: 5, away_goals: 0, home_pens: null, away_pens: null, status: 'finished',
+    kickoff: '2026-06-15T15:00:00Z', home_goals: 5, away_goals: 0, home_g90: null, away_g90: null, home_pens: null, away_pens: null, status: 'finished',
   } // Ann's a1 wins big → Ann 8, overtakes Bob
 
   it('is null when only one matchday has finished (no prior table to compare)', () => {
@@ -114,15 +126,15 @@ describe('computeLeaderboard — rank movement vs previous matchday (delta)', ()
     // scheduled — so the arrows must still reflect Ann's day-2 climb, not collapse to "held".
     const day2: MatchRow = {
       id: 'G-A-2', stage: 'group', grp: 'A', home_team_id: 'a1', away_team_id: 'a3',
-      kickoff: '2026-06-12T15:00:00Z', home_goals: 5, away_goals: 0, home_pens: null, away_pens: null, status: 'finished',
+      kickoff: '2026-06-12T15:00:00Z', home_goals: 5, away_goals: 0, home_g90: null, away_g90: null, home_pens: null, away_pens: null, status: 'finished',
     }
     const day3done: MatchRow = {
       id: 'G-A-3', stage: 'group', grp: 'A', home_team_id: 'a4', away_team_id: 'a3',
-      kickoff: '2026-06-13T15:00:00Z', home_goals: 1, away_goals: 0, home_pens: null, away_pens: null, status: 'finished',
+      kickoff: '2026-06-13T15:00:00Z', home_goals: 1, away_goals: 0, home_g90: null, away_g90: null, home_pens: null, away_pens: null, status: 'finished',
     }
     const day3pending: MatchRow = {
       id: 'G-A-4', stage: 'group', grp: 'A', home_team_id: 'a3', away_team_id: 'a4',
-      kickoff: '2026-06-13T18:00:00Z', home_goals: null, away_goals: null, home_pens: null, away_pens: null, status: 'scheduled',
+      kickoff: '2026-06-13T18:00:00Z', home_goals: null, away_goals: null, home_g90: null, away_g90: null, home_pens: null, away_pens: null, status: 'scheduled',
     }
     const { leaderboard } = computeLeaderboard(teams, [md1, day2, day3done, day3pending], picks, managers)
     const ann = leaderboard.find((r) => r.managerId === 'm1')!

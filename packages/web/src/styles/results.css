@@ -360,6 +360,36 @@
 .results .tier-team.out .flag { filter: grayscale(.6); }
 /* eliminated team's flag anywhere else (squad bar, hold cluster, result rows) */
 .results .flag.faded { opacity: .4; filter: grayscale(.6); }
+
+/* ── Knockout bracket — classic symmetric, two halves meeting at the Final.
+   Each tie is formatted exactly like a fixtures result row (tier-bordered box:
+   flag · abbr · score, manager beside), minus the R/G/B stats. ───────────────── */
+.bracket { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 14px; align-items: stretch; }
+.bk-col { flex: 1 1 0; min-width: 150px; display: flex; flex-direction: column; }
+.bk-col.narrow { flex: 0 0 auto; min-width: 0; }      /* rounds with no teams yet stay compact */
+.bk-col-h { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); text-align: center; margin-bottom: 10px; }
+.bk-col-body { flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 8px; }
+
+.bk-match { display: flex; flex-direction: column; gap: 5px; background: var(--panel-2); border: 1px solid var(--hairline); border-radius: 10px; padding: 7px; }
+.bk-match.tbd { opacity: .5; }
+.bk-rr { display: flex; align-items: center; gap: 8px; }
+.bk-rr.lose { opacity: .4; }
+.bk-box { display: flex; align-items: center; gap: 7px; padding: 4px 9px 4px 6px; border-radius: 8px; border: 2px solid var(--c, var(--hairline)); background: var(--panel); flex: 0 0 auto; min-width: 56px; }
+.bk-box.t1 { --c: var(--t1); } .bk-box.t2 { --c: var(--t2); } .bk-box.t3 { --c: var(--t3); }
+.bk-box .flag { width: 18px; height: 12px; border-radius: 2px; flex: 0 0 auto; }
+.bk-abbr { font-family: var(--mono); font-weight: 700; font-size: 12px; }
+.bk-score { margin-left: auto; font-family: var(--mono); font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+.bk-mgr { flex: 1; min-width: 0; font-weight: 700; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bk-total { flex: 0 0 auto; font-family: var(--mono); font-size: 12px; font-weight: 700; color: #fff; background: #3b82f6; border-radius: 6px; padding: 2px 7px; min-width: 22px; text-align: center; }
+.bk-total.zero { background: var(--chip); color: var(--muted); }
+.bk-dot { width: 18px; height: 12px; border-radius: 2px; background: color-mix(in srgb, var(--muted) 18%, transparent); flex: 0 0 auto; }
+.bk-note { font-size: 9px; color: var(--muted); letter-spacing: .04em; padding: 0 2px; }
+
+/* right half: mirror each tie so the bracket reads inward toward the Final */
+.bk-col.mir .bk-rr { flex-direction: row-reverse; }
+.bk-col.mir .bk-box { flex-direction: row-reverse; padding: 4px 6px 4px 9px; }
+.bk-col.mir .bk-score { margin-left: 0; margin-right: auto; }
+.bk-col.mir .bk-mgr { text-align: right; }
 /* mobile: stack the tier label above the flags so the grid gets the full width */
 @media (max-width: 760px) {
   .results .tier-band { flex-direction: column; gap: 6px; }
