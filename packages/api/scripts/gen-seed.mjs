@@ -55,7 +55,33 @@ for (const [g, games] of Object.entries(SCHEDULE)) {
   DATE_OF[g] = {}
   for (const [a, b, et] of games) DATE_OF[g][pairKey(a, b)] = etToUtc(et)
 }
+// Real 2026 World Cup Round-of-32 kickoffs, keyed by the bracket slot id. The slots
+// follow the official template (R32-1..R32-16 = matches 73..88), so each has a fixed
+// date/time/venue even before its teams are known. Stored as ET wall-clock and
+// converted to true UTC instants (via etToUtc), exactly like the group schedule above,
+// so the web app renders each in the viewer's own timezone. Source: official FIFA
+// match schedule (cross-checked against ESPN/Yahoo/Sky day-by-day listings).
+const R32_KICKOFFS = {
+  'R32-1': '06-28 15:00',  // South Africa v Canada — SoFi, Los Angeles
+  'R32-2': '06-29 16:30',  // Germany v Paraguay — Gillette, Boston
+  'R32-3': '06-29 21:00',  // Netherlands v Morocco — Estadio Monterrey
+  'R32-4': '06-29 13:00',  // Brazil v Japan — NRG, Houston
+  'R32-5': '06-30 17:00',  // France v Sweden — MetLife, New York/New Jersey
+  'R32-6': '06-30 13:00',  // Côte d'Ivoire v Norway — AT&T, Dallas
+  'R32-7': '06-30 21:00',  // Mexico v Ecuador — Estadio Azteca, Mexico City
+  'R32-8': '07-01 12:00',  // England v DR Congo — Mercedes-Benz, Atlanta
+  'R32-9': '07-01 20:00',  // USA v Bosnia and Herzegovina — Levi's, San Francisco Bay Area
+  'R32-10': '07-01 16:00', // Belgium v Senegal — Lumen Field, Seattle
+  'R32-11': '07-02 19:00', // Portugal v Croatia — BMO Field, Toronto
+  'R32-12': '07-02 15:00', // Spain v Austria — SoFi, Los Angeles
+  'R32-13': '07-02 23:00', // Switzerland v Algeria — BC Place, Vancouver
+  'R32-14': '07-03 18:00', // Argentina v Cape Verde — Hard Rock, Miami
+  'R32-15': '07-03 21:30', // Colombia v Ghana — Arrowhead, Kansas City
+  'R32-16': '07-03 14:00', // Australia v Egypt — AT&T, Dallas
+}
 // Knockout date windows; each stage's slots are spread evenly across its window.
+// R32 now uses the exact per-slot times above; the later rounds still spread their
+// window evenly (real teams/dates fill in as the bracket resolves).
 const KO_DATES = {
   R32: ['2026-06-28', '2026-06-29', '2026-06-30', '2026-07-01', '2026-07-02', '2026-07-03'],
   R16: ['2026-07-04', '2026-07-05', '2026-07-06', '2026-07-07'],
@@ -121,8 +147,10 @@ for (const [stage, count] of KO) {
   const window = KO_DATES[stage] || []
   for (let i = 1; i <= count; i++) {
     const id = `${stage}-${i}`
-    // Spread this stage's slots evenly across its date window.
-    const kickoff = window.length ? window[Math.floor(((i - 1) * window.length) / count)] : null
+    // R32 has a real per-slot kickoff; later stages spread evenly across their window.
+    const kickoff = R32_KICKOFFS[id]
+      ? etToUtc(R32_KICKOFFS[id])
+      : window.length ? window[Math.floor(((i - 1) * window.length) / count)] : null
     lines.push(
       `INSERT INTO matches (id,stage,grp,home_team_id,away_team_id,kickoff,status) VALUES (` +
       `${sqlStr(id)},${sqlStr(stage)},NULL,NULL,NULL,${sqlStr(kickoff)},'scheduled') ` +
