@@ -385,6 +385,18 @@
 .bk-dot { width: 18px; height: 12px; border-radius: 2px; background: color-mix(in srgb, var(--muted) 18%, transparent); flex: 0 0 auto; }
 .bk-note { font-size: 9px; color: var(--muted); letter-spacing: .04em; padding: 0 2px; }
 
+/* ── Form-guide chart (points per round) ──────────────────────────────────── */
+.results .trend-wrap { background: var(--panel-2); border: 1px solid var(--hairline); border-radius: 12px; padding: 10px 6px 4px; }
+.results .trend-svg { width: 100%; height: auto; display: block; }
+.results .trend-grid { stroke: var(--hairline); stroke-width: 1; }
+.results .trend-axis { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
+.results .trend-axis-title { fill: var(--muted); font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.results .trend-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.results .trend-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; }
+.results .trend-key { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 12px; color: var(--text); }
+.results .trend-key b { color: var(--muted); font-weight: 700; }
+.results .trend-swatch { width: 12px; height: 12px; border-radius: 3px; flex: 0 0 auto; }
+
 /* right half: mirror each tie so the bracket reads inward toward the Final */
 .bk-col.mir .bk-rr { flex-direction: row-reverse; }
 .bk-col.mir .bk-box { flex-direction: row-reverse; padding: 4px 6px 4px 9px; }
