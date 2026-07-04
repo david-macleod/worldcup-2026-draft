@@ -152,11 +152,8 @@ export function Trends({ leagueId }: { leagueId: string }) {
   const { series, maxRound } = built!
   const labels = Array.from({ length: maxRound }, (_, i) => ROUND_LABEL[i + 1] ?? String(i + 1))
 
-  // 1) running points per round (cumulative points ÷ matches played)
-  const ppg: Line[] = series.map((s) => {
-    let cumP = 0, cumG = 0
-    return { id: s.id, name: s.name, color: s.color, ys: s.pts.map((p, i) => { cumP += p; cumG += s.games[i]; return cumG > 0 ? cumP / cumG : 0 }) }
-  })
+  // 1) raw points earned in each round (not cumulative)
+  const perRound: Line[] = series.map((s) => ({ id: s.id, name: s.name, color: s.color, ys: s.pts }))
   // 2) total points over time (cumulative)
   const totals: Line[] = series.map((s) => {
     let cum = 0
@@ -179,7 +176,7 @@ export function Trends({ leagueId }: { leagueId: string }) {
         <>
           <section>
             <div className="sec-head"><h2>Points per round</h2></div>
-            <Chart labels={labels} lines={ppg} fmt={(n) => n.toFixed(1)} />
+            <Chart labels={labels} lines={perRound} fmt={(n) => String(Math.round(n))} />
           </section>
           <section>
             <div className="sec-head"><h2>Total points</h2></div>
