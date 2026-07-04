@@ -392,6 +392,12 @@
 .results .trend-axis { fill: var(--muted); font-family: var(--mono); font-size: 11px; }
 .results .trend-axis-title { fill: var(--muted); font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
 .results .trend-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.results .trend-cross { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; opacity: .6; }
+.results .trend-tip-bg { fill: var(--panel); stroke: var(--hairline); stroke-width: 1; opacity: .97; }
+.results .trend-tip-h { fill: var(--muted); font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.results .trend-tip-n { fill: var(--text); font-family: var(--mono); font-size: 11px; }
+.results .trend-tip-v { fill: var(--text); font-family: var(--mono); font-size: 11px; font-weight: 700; }
+.results .trend-svg rect[onmousemove], .results .trend-svg { cursor: crosshair; }
 .results .trend-legend { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 12px; }
 .results .trend-key { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 12px; color: var(--text); }
 .results .trend-key b { color: var(--muted); font-weight: 700; }
