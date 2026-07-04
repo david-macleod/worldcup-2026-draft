@@ -19,7 +19,7 @@ function matchPoints(gf: number, ga: number, goals90: number, tier?: number, opp
   return result + goals90 + bonus
 }
 
-interface Series { id: string; name: string; color: string; pts: number[] /* per round, points earned that round */ }
+interface Series { id: string; name: string; color: string; pts: number[]; games: number[] /* per round: points earned + matches played that round */ }
 
 function buildSeries(view: LeagueView): { series: Series[]; maxRound: number } {
   const n = view.league.nManagers
@@ -64,11 +64,12 @@ function buildSeries(view: LeagueView): { series: Series[]; maxRound: number } {
   for (const p of view.picks) (squads[p.managerId] ||= []).push(p.teamId)
 
   const series: Series[] = view.managers.map((mgr) => {
-    const pts = Array(maxRound + 1).fill(0) // pts earned in each round
+    const pts = Array(maxRound + 1).fill(0)   // points earned in each round
+    const games = Array(maxRound + 1).fill(0) // matches played in each round
     for (const teamId of squads[mgr.id] || []) {
-      for (const r of perTeam[teamId] || []) pts[r.round] += r.pts
+      for (const r of perTeam[teamId] || []) { pts[r.round] += r.pts; games[r.round] += 1 }
     }
-    return { id: mgr.id, name: mgr.name, color: mgr.color, pts: pts.slice(1) }
+    return { id: mgr.id, name: mgr.name, color: mgr.color, pts: pts.slice(1), games: games.slice(1) }
   })
   return { series, maxRound }
 }
@@ -86,10 +87,11 @@ export function Trends({ leagueId }: { leagueId: string }) {
   const view = q.data!
   const { series, maxRound } = data!
 
-  // cumulative points ÷ round at each round
+  // running points-per-round: cumulative points ÷ cumulative matches played (each match
+  // counts as a round). The last value equals the manager's overall PPG.
   const lines = series.map((s) => {
-    let cum = 0
-    const ys = s.pts.map((p, i) => { cum += p; return cum / (i + 1) })
+    let cumP = 0, cumG = 0
+    const ys = s.pts.map((p, i) => { cumP += p; cumG += s.games[i]; return cumG > 0 ? cumP / cumG : 0 })
     return { ...s, ys }
   })
   const maxY = Math.max(1, ...lines.flatMap((l) => l.ys))
