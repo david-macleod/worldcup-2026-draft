@@ -92,6 +92,8 @@ function CreateLeague({ onCreated }: { onCreated: (leagueId?: string) => void })
   const [name, setName] = useState('')
   const [mode, setMode] = useState('sequential')
   const [rounds, setRounds] = useState(6)
+  const [finalDouble, setFinalDouble] = useState(false)
+  const [thirdPlaceScores, setThirdPlaceScores] = useState(false)
   const [names, setNames] = useState<string[]>(Array.from({ length: 8 }, (_, i) => `Player ${String.fromCharCode(65 + i)}`))
   const [err, setErr] = useState('')
 
@@ -112,7 +114,7 @@ function CreateLeague({ onCreated }: { onCreated: (leagueId?: string) => void })
   const create = useMutation({
     mutationFn: () => apiFetch<{ leagueId: string; managers: AdminLeague['managers'] }>('/admin/leagues', {
       admin: true, method: 'POST',
-      body: JSON.stringify({ name, mode, rounds, managers: names.map((n) => ({ name: n })) }),
+      body: JSON.stringify({ name, mode, rounds, finalDouble, thirdPlaceScores, managers: names.map((n) => ({ name: n })) }),
     }),
     onSuccess: (r) => { setErr(''); setName(''); onCreated(r.leagueId) },
     onError: (e: Error) => setErr(e.message),
@@ -143,6 +145,17 @@ function CreateLeague({ onCreated }: { onCreated: (leagueId?: string) => void })
       <p className="sec-sub" style={{ color: overField ? '#ff8b8b' : undefined }}>
         {count} × {rounds} = <b>{total}</b> of {FIELD} nations drafted{overField ? ' — too many, reduce participants or teams each' : total < FIELD ? ` (${FIELD - total} nations go undrafted)` : ' (every nation owned)'}
       </p>
+      <label>Scoring options</label>
+      <div className="stack" style={{ gap: 6, marginBottom: 10 }}>
+        <label className="row" style={{ gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+          <input type="checkbox" checked={finalDouble} onChange={(e) => setFinalDouble(e.target.checked)} />
+          <span>Final scores <b>double</b> points</span>
+        </label>
+        <label className="row" style={{ gap: 8, alignItems: 'center', cursor: 'pointer' }}>
+          <input type="checkbox" checked={thirdPlaceScores} onChange={(e) => setThirdPlaceScores(e.target.checked)} />
+          <span>Third-place playoff <b>awards</b> points</span>
+        </label>
+      </div>
       <label>Participant names</label>
       <div className="grid2">
         {names.map((n, i) => (
@@ -243,6 +256,9 @@ function LeagueCard({ lg, onChange }: { lg: AdminLeague; onChange: () => void })
   const rename = (path: string, name: string) => apiFetch(path, {
     admin: true, method: 'PATCH', body: JSON.stringify({ name }),
   }).then(() => { setErr(''); onChange() }).catch((e: Error) => setErr(e.message))
+  const setOption = (opt: 'finalDouble' | 'thirdPlaceScores', value: boolean) => apiFetch(`/admin/leagues/${lg.id}`, {
+    admin: true, method: 'PATCH', body: JSON.stringify({ [opt]: value }),
+  }).then(() => { setErr(''); onChange() }).catch((e: Error) => setErr(e.message))
   return (
     <div id={`league-${lg.id}`} className="league-card" style={{ border: '1px solid var(--line-soft)', borderRadius: 11, padding: 12 }}>
       <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
@@ -259,6 +275,16 @@ function LeagueCard({ lg, onChange }: { lg: AdminLeague; onChange: () => void })
         </div>
       </div>
       {err && <p className="err">{err}</p>}
+      <div className="row" style={{ gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
+        <label className="row" style={{ gap: 6, alignItems: 'center', cursor: 'pointer', fontSize: 13 }}>
+          <input type="checkbox" checked={lg.finalDouble} onChange={(e) => setOption('finalDouble', e.target.checked)} />
+          <span>Final ×2</span>
+        </label>
+        <label className="row" style={{ gap: 6, alignItems: 'center', cursor: 'pointer', fontSize: 13 }}>
+          <input type="checkbox" checked={lg.thirdPlaceScores} onChange={(e) => setOption('thirdPlaceScores', e.target.checked)} />
+          <span>3rd-place scores</span>
+        </label>
+      </div>
       <div className="stack" style={{ marginTop: 10 }}>
         {lg.managers.map((m) => (
           <ManagerLink key={m.id} name={m.name} link={m.link} seat={m.seat}
@@ -276,7 +302,7 @@ function MatchResults() {
   const reload = () => qc.invalidateQueries({ queryKey: ['admin-matches'] })
   if (matchesQ.isLoading) return <div className="panel"><h2>Results</h2><p className="muted">Loading fixtures…</p></div>
   const matches = matchesQ.data?.matches ?? []
-  const stages = ['group', 'R32', 'R16', 'QF', 'SF', 'Final']
+  const stages = ['group', 'R32', 'R16', 'QF', 'SF', '3P', 'Final']
   const shown = matches.filter((m) => m.stage === stage)
 
   return (

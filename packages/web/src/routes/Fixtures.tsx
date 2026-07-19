@@ -7,7 +7,7 @@ import { GroupTable } from '../components/GroupTable'
 import { Bracket } from '../components/Bracket'
 import { eliminatedTeams } from '../lib/elimination'
 
-const KO_STAGES = ['R32', 'R16', 'QF', 'SF', 'Final'] as const
+const KO_STAGES = ['R32', 'R16', 'QF', 'SF', '3P', 'Final'] as const
 // Local kickoff time, with single-digit AM hours zero-padded (9:00 AM -> 09:00 AM;
 // PM and 10/11/12 AM are left as-is).
 function fmtTime(d: Date): string {

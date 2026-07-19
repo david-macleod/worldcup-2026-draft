@@ -87,6 +87,46 @@ describe('computeLeaderboard (tiers derived from draft round)', () => {
   })
 })
 
+describe('computeLeaderboard — scoring options (final double / third-place)', () => {
+  const teams = [team('a1'), team('a2')]
+  const managers: ManagerRow[] = [
+    { id: 'm1', league_id: 'L', name: 'Ann', token: 't1', seat: 0, color: '#fff' },
+    { id: 'm2', league_id: 'L', name: 'Bob', token: 't2', seat: 1, color: '#000' },
+  ]
+  const picks: PickRow[] = [
+    { id: 'p1', league_id: 'L', overall: 0, manager_id: 'm1', team_id: 'a1', created_at: '' }, // tier 1
+    { id: 'p2', league_id: 'L', overall: 1, manager_id: 'm2', team_id: 'a2', created_at: '' }, // tier 1
+  ]
+  const ko = (id: string, stage: MatchRow['stage'], hg: number, ag: number): MatchRow => ({
+    id, stage, grp: null, home_team_id: 'a1', away_team_id: 'a2',
+    kickoff: null, home_goals: hg, away_goals: ag, home_g90: null, away_g90: null, home_pens: null, away_pens: null, status: 'finished',
+  })
+
+  it('Final scores normally by default, and double when finalDouble is on', () => {
+    const fin = [ko('Final-1', 'Final', 2, 0)] // a1 win 2-0 → 3 + 2 = 5
+    expect(computeLeaderboard(teams, fin, picks, managers).perTeamPoints.a1.total).toBe(5)
+    expect(computeLeaderboard(teams, fin, picks, managers, { finalDouble: true, thirdPlaceScores: false }).perTeamPoints.a1.total).toBe(10)
+  })
+
+  it('doubling the Final scales result, goals and bonus components alike', () => {
+    const fin = [ko('Final-1', 'Final', 2, 0)]
+    const p = computeLeaderboard(teams, fin, picks, managers, { finalDouble: true, thirdPlaceScores: false }).perTeamPoints.a1
+    expect(p).toMatchObject({ result: 6, goals: 4, total: 10 })
+  })
+
+  it('third-place playoff awards nothing by default, and normal points when enabled', () => {
+    const bronze = [ko('3P-1', '3P', 1, 0)] // a1 win 1-0 → 3 + 1 = 4
+    expect(computeLeaderboard(teams, bronze, picks, managers).perTeamPoints.a1.total).toBe(0)
+    expect(computeLeaderboard(teams, bronze, picks, managers, { finalDouble: false, thirdPlaceScores: true }).perTeamPoints.a1.total).toBe(4)
+  })
+
+  it('the third-place playoff never counts toward furthest stage reached', () => {
+    const bronze = [ko('3P-1', '3P', 1, 0)]
+    const on = computeLeaderboard(teams, bronze, picks, managers, { finalDouble: false, thirdPlaceScores: true })
+    expect(on.perTeamPoints.a1.stage).toBe('Group') // playing (and winning) the bronze match doesn't "advance" anyone
+  })
+})
+
 describe('computeLeaderboard — rank movement vs previous matchday (delta)', () => {
   const teams = [team('a1'), team('a2'), team('a3'), team('a4')]
   const managers: ManagerRow[] = [

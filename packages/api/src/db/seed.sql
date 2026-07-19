@@ -159,4 +159,5 @@ INSERT INTO matches (id,stage,grp,home_team_id,away_team_id,kickoff,status) VALU
 INSERT INTO matches (id,stage,grp,home_team_id,away_team_id,kickoff,status) VALUES ('QF-4','QF',NULL,NULL,NULL,'2026-07-12T01:00:00Z','scheduled') ON CONFLICT(id) DO UPDATE SET kickoff=excluded.kickoff;
 INSERT INTO matches (id,stage,grp,home_team_id,away_team_id,kickoff,status) VALUES ('SF-1','SF',NULL,NULL,NULL,'2026-07-14T19:00:00Z','scheduled') ON CONFLICT(id) DO UPDATE SET kickoff=excluded.kickoff;
 INSERT INTO matches (id,stage,grp,home_team_id,away_team_id,kickoff,status) VALUES ('SF-2','SF',NULL,NULL,NULL,'2026-07-15T19:00:00Z','scheduled') ON CONFLICT(id) DO UPDATE SET kickoff=excluded.kickoff;
+INSERT INTO matches (id,stage,grp,home_team_id,away_team_id,kickoff,status) VALUES ('3P-1','3P',NULL,NULL,NULL,'2026-07-18T19:00:00Z','scheduled') ON CONFLICT(id) DO UPDATE SET kickoff=excluded.kickoff;
 INSERT INTO matches (id,stage,grp,home_team_id,away_team_id,kickoff,status) VALUES ('Final-1','Final',NULL,NULL,NULL,'2026-07-19T19:00:00Z','scheduled') ON CONFLICT(id) DO UPDATE SET kickoff=excluded.kickoff;

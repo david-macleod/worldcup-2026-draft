@@ -86,16 +86,31 @@ function matchdayKey(kickoff: string | null | undefined): string | null {
   return new Date(ms - 11 * 3600_000).toISOString().slice(0, 10)
 }
 
+/** Per-league scoring options. Both default off (preserving the base formula). */
+export interface ScoringOptions {
+  finalDouble: boolean       // the Final awards double points to both teams
+  thirdPlaceScores: boolean  // the third-place playoff awards points at all
+}
+
+/** Points multiplier for a match under the league's options: 0 skips it entirely. */
+function matchMultiplier(stage: string, opt: ScoringOptions): number {
+  if (stage === '3P') return opt.thirdPlaceScores ? 1 : 0
+  if (stage === 'Final') return opt.finalDouble ? 2 : 1
+  return 1
+}
+
 /** Per-team total points across a set of matches (the scoring loop, totals only). */
-function teamTotals(matches: MatchRow[], tierByTeam: Record<string, number>): Record<string, number> {
+function teamTotals(matches: MatchRow[], tierByTeam: Record<string, number>, opt: ScoringOptions): Record<string, number> {
   const totals: Record<string, number> = {}
   for (const m of matches) {
     if (m.status !== 'finished' || m.home_goals == null || m.away_goals == null) continue
+    const mult = matchMultiplier(m.stage, opt)
+    if (mult === 0) continue
     const hTier = m.home_team_id ? tierByTeam[m.home_team_id] ?? null : null
     const aTier = m.away_team_id ? tierByTeam[m.away_team_id] ?? null : null
     const hG90 = m.home_g90 ?? m.home_goals, aG90 = m.away_g90 ?? m.away_goals
-    if (m.home_team_id) totals[m.home_team_id] = (totals[m.home_team_id] || 0) + matchScore(m.home_goals, m.away_goals, hTier, aTier, hG90).total
-    if (m.away_team_id) totals[m.away_team_id] = (totals[m.away_team_id] || 0) + matchScore(m.away_goals, m.home_goals, aTier, hTier, aG90).total
+    if (m.home_team_id) totals[m.home_team_id] = (totals[m.home_team_id] || 0) + matchScore(m.home_goals, m.away_goals, hTier, aTier, hG90).total * mult
+    if (m.away_team_id) totals[m.away_team_id] = (totals[m.away_team_id] || 0) + matchScore(m.away_goals, m.home_goals, aTier, hTier, aG90).total * mult
   }
   return totals
 }
@@ -143,6 +158,7 @@ export function computeLeaderboard(
   matches: MatchRow[],
   picks: PickRow[],
   managers: ManagerRow[],
+  opt: ScoringOptions = { finalDouble: false, thirdPlaceScores: false },
 ): Leaderboard {
   const nManagers = managers.length || 8
   // Each drafted team's tier comes from the round it was picked in (this league).
@@ -159,19 +175,22 @@ export function computeLeaderboard(
     if (p && STAGE_ORD[stage] > STAGE_ORD[p.stage]) p.stage = stage
   }
 
-  // points: every finished match, both sides, with tier-aware upset bonuses
+  // points: every finished match, both sides, with tier-aware upset bonuses. The Final can
+  // count double and the third-place playoff can be off — a per-match multiplier (0 skips it).
   for (const m of matches) {
     if (m.status !== 'finished' || m.home_goals == null || m.away_goals == null) continue
+    const mult = matchMultiplier(m.stage, opt)
+    if (mult === 0) continue
     const hTier = m.home_team_id ? tierByTeam[m.home_team_id] ?? null : null
     const aTier = m.away_team_id ? tierByTeam[m.away_team_id] ?? null : null
     const hG90 = m.home_g90 ?? m.home_goals, aG90 = m.away_g90 ?? m.away_goals
     if (m.home_team_id && perTeamPoints[m.home_team_id]) {
       const s = matchScore(m.home_goals, m.away_goals, hTier, aTier, hG90)
-      const p = perTeamPoints[m.home_team_id]; p.result += s.result; p.goals += s.goals; p.bonus += s.bonus; p.total += s.total
+      const p = perTeamPoints[m.home_team_id]; p.result += s.result * mult; p.goals += s.goals * mult; p.bonus += s.bonus * mult; p.total += s.total * mult
     }
     if (m.away_team_id && perTeamPoints[m.away_team_id]) {
       const s = matchScore(m.away_goals, m.home_goals, aTier, hTier, aG90)
-      const p = perTeamPoints[m.away_team_id]; p.result += s.result; p.goals += s.goals; p.bonus += s.bonus; p.total += s.total
+      const p = perTeamPoints[m.away_team_id]; p.result += s.result * mult; p.goals += s.goals * mult; p.bonus += s.bonus * mult; p.total += s.total * mult
     }
   }
 
@@ -179,7 +198,7 @@ export function computeLeaderboard(
   const qualified = computeQualified(teams, matches)
   for (const id of qualified) bump(id, 'R32')
   for (const m of matches) {
-    if (m.stage === 'group' || m.status !== 'finished') continue
+    if (m.stage === 'group' || m.stage === '3P' || m.status !== 'finished') continue // 3P winner didn't "advance"
     const w = winnerOf(m)
     if (w) bump(w, KO_REACH[m.stage] ?? 'R32')
   }
@@ -224,7 +243,7 @@ export function computeLeaderboard(
       const k = matchdayKey(m.kickoff)
       return k == null || k <= refDay
     })
-    const refTotals = teamTotals(refMatches, tierByTeam)
+    const refTotals = teamTotals(refMatches, tierByTeam, opt)
     const refRank: Record<string, number> = {}
     managers
       .map((m) => ({ id: m.id, name: m.name, total: (squads[m.id] || []).reduce((s, tid) => s + (refTotals[tid] || 0), 0) }))

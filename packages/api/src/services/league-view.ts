@@ -22,7 +22,8 @@ export async function buildLeagueView(db: D1Database, leagueId: string) {
   // Knockout matchups are derived from the standings, not stored — fill them in so both
   // the scoring loop and the returned fixtures know who plays in each bracket slot.
   const matches = applyBracket(teams, rawMatches)
-  const { leaderboard, perTeamPoints } = computeLeaderboard(teams, matches, picks, managers)
+  const opt = { finalDouble: !!league.final_double, thirdPlaceScores: !!league.third_place_scores }
+  const { leaderboard, perTeamPoints } = computeLeaderboard(teams, matches, picks, managers, opt)
 
   // seat -> manager id, for board rendering
   const order: string[] = league.order_json ? JSON.parse(league.order_json) : []
@@ -38,6 +39,8 @@ export async function buildLeagueView(db: D1Database, leagueId: string) {
       nManagers: league.n_managers,
       nRounds: league.n_rounds,
       totalPicks: league.n_managers * league.n_rounds,
+      finalDouble: opt.finalDouble,
+      thirdPlaceScores: opt.thirdPlaceScores,
     },
     managers: managers.map((m) => ({ id: m.id, name: m.name, seat: m.seat, color: m.color })),
     picks: picks.map((p) => ({ overall: p.overall, managerId: p.manager_id, teamId: p.team_id })),

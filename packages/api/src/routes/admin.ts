@@ -39,10 +39,12 @@ function shuffle<T>(arr: T[]): T[] {
 
 // POST /api/admin/leagues — create a sequential|autodraft league + N managers + tokens.
 adminRoutes.post('/leagues', async (c) => {
-  const body = await c.req.json<{ name?: string; mode?: LeagueMode; rounds?: number; managers?: Array<{ name: string }> }>()
+  const body = await c.req.json<{ name?: string; mode?: LeagueMode; rounds?: number; managers?: Array<{ name: string }>; finalDouble?: boolean; thirdPlaceScores?: boolean }>()
     .catch(() => ({} as any))
   const { name, mode, managers } = body
   const rounds = body.rounds ?? N_ROUNDS
+  const finalDouble = body.finalDouble ? 1 : 0
+  const thirdPlaceScores = body.thirdPlaceScores ? 1 : 0
   if (!name || (mode !== 'sequential' && mode !== 'autodraft')) {
     return c.json({ error: 'name and mode (sequential|autodraft) required; use /import for imported' }, 400)
   }
@@ -65,8 +67,8 @@ adminRoutes.post('/leagues', async (c) => {
 
   await c.env.DB.batch([
     c.env.DB.prepare(
-      'INSERT INTO leagues (id, name, mode, status, current_overall, created_at, n_managers, n_rounds) VALUES (?, ?, ?, ?, 0, ?, ?, ?)',
-    ).bind(leagueId, name, mode, 'setup', now, nManagers, rounds),
+      'INSERT INTO leagues (id, name, mode, status, current_overall, created_at, n_managers, n_rounds, final_double, third_place_scores) VALUES (?, ?, ?, ?, 0, ?, ?, ?, ?, ?)',
+    ).bind(leagueId, name, mode, 'setup', now, nManagers, rounds, finalDouble, thirdPlaceScores),
     ...created.map((m) =>
       c.env.DB.prepare('INSERT INTO managers (id, league_id, name, token, color) VALUES (?, ?, ?, ?, ?)')
         .bind(m.id, leagueId, m.name, m.token, m.color)),
@@ -256,6 +258,7 @@ adminRoutes.get('/leagues', async (c) => {
       id: lg.id, name: lg.name, mode: lg.mode, status: lg.status,
       currentOverall: lg.current_overall, picks: picks.length,
       nManagers: lg.n_managers, nRounds: lg.n_rounds, totalPicks: lg.n_managers * lg.n_rounds,
+      finalDouble: !!lg.final_double, thirdPlaceScores: !!lg.third_place_scores,
       managers: managers.map((m) => ({ id: m.id, name: m.name, seat: m.seat, color: m.color, link: managerLink(lg.id, m.token, m.name) })),
     })
   }
@@ -271,13 +274,23 @@ adminRoutes.delete('/leagues/:id', async (c) => {
   return c.json({ ok: true })
 })
 
-// PATCH /api/admin/leagues/:id — rename a league.
+// PATCH /api/admin/leagues/:id — rename a league and/or toggle its scoring options.
+// Any provided field is updated; all are optional but at least one is required.
 adminRoutes.patch('/leagues/:id', async (c) => {
   const id = c.req.param('id')
-  const body = await c.req.json<{ name?: string }>().catch(() => ({} as { name?: string }))
-  const name = body.name?.trim()
-  if (!name) return c.json({ error: 'name required' }, 400)
-  const { meta } = await c.env.DB.prepare('UPDATE leagues SET name = ? WHERE id = ?').bind(name, id).run()
+  const body = await c.req.json<{ name?: string; finalDouble?: boolean; thirdPlaceScores?: boolean }>()
+    .catch(() => ({} as { name?: string; finalDouble?: boolean; thirdPlaceScores?: boolean }))
+  const sets: string[] = []
+  const vals: (string | number)[] = []
+  if (body.name !== undefined) {
+    const name = body.name.trim()
+    if (!name) return c.json({ error: 'name cannot be blank' }, 400)
+    sets.push('name = ?'); vals.push(name)
+  }
+  if (body.finalDouble !== undefined) { sets.push('final_double = ?'); vals.push(body.finalDouble ? 1 : 0) }
+  if (body.thirdPlaceScores !== undefined) { sets.push('third_place_scores = ?'); vals.push(body.thirdPlaceScores ? 1 : 0) }
+  if (!sets.length) return c.json({ error: 'nothing to update' }, 400)
+  const { meta } = await c.env.DB.prepare(`UPDATE leagues SET ${sets.join(', ')} WHERE id = ?`).bind(...vals, id).run()
   if (!meta.changes) return c.json({ error: 'league not found' }, 404)
   return c.json({ ok: true })
 })

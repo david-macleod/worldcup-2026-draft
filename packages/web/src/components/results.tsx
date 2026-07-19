@@ -136,11 +136,14 @@ function recomputeRound(view: LeagueView, round: 1 | 2 | 3 | 'ko', roundMap: Rec
   const teamTotal: Record<string, number> = {}
   for (const m of view.matches) {
     if (roundMap[m.id] !== round || m.status !== 'finished' || m.home_goals == null || m.away_goals == null) continue
+    // mirror the league scoring options (services/scoring.ts): Final ×2, third-place off → 0.
+    const mult = m.stage === 'Final' ? (view.league.finalDouble ? 2 : 1) : m.stage === '3P' ? (view.league.thirdPlaceScores ? 1 : 0) : 1
+    if (mult === 0) continue
     const hT = m.home_team_id ? tierByTeam[m.home_team_id] ?? null : null
     const aT = m.away_team_id ? tierByTeam[m.away_team_id] ?? null : null
     const hG90 = m.home_g90 ?? m.home_goals, aG90 = m.away_g90 ?? m.away_goals
-    if (m.home_team_id) teamTotal[m.home_team_id] = (teamTotal[m.home_team_id] || 0) + matchScore(m.home_goals, m.away_goals, hT, aT, hG90).total
-    if (m.away_team_id) teamTotal[m.away_team_id] = (teamTotal[m.away_team_id] || 0) + matchScore(m.away_goals, m.home_goals, aT, hT, aG90).total
+    if (m.home_team_id) teamTotal[m.home_team_id] = (teamTotal[m.home_team_id] || 0) + matchScore(m.home_goals, m.away_goals, hT, aT, hG90).total * mult
+    if (m.away_team_id) teamTotal[m.away_team_id] = (teamTotal[m.away_team_id] || 0) + matchScore(m.away_goals, m.home_goals, aT, hT, aG90).total * mult
   }
   const squads: Record<string, string[]> = {}
   for (const p of [...view.picks].sort((a, b) => a.overall - b.overall)) (squads[p.managerId] ||= []).push(p.teamId)
@@ -668,7 +671,8 @@ export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; h
 
       <div className="tab-panel" data-panel="groups">
         <div className="sec-head"><h2>Knockout bracket</h2></div>
-        <Bracket matches={view.matches} teams={view.teams} tierOf={(id) => owners[id]?.tier} ownerOf={(id) => owners[id]?.name} />
+        <Bracket matches={view.matches} teams={view.teams} tierOf={(id) => owners[id]?.tier} ownerOf={(id) => owners[id]?.name}
+          finalDouble={view.league.finalDouble} thirdPlaceScores={view.league.thirdPlaceScores} />
         <GroupsBoard view={view} owners={owners} />
       </div>
     </div>

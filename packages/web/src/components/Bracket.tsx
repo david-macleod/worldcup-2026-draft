@@ -41,7 +41,13 @@ function matchPoints(gf: number, ga: number, goals90: number, tier?: number, opp
   return result + goals90 + bonus
 }
 
-export function Bracket({ matches, teams, tierOf, ownerOf }: { matches: Match[]; teams: Team[]; tierOf?: (id: string) => number | undefined; ownerOf?: (id: string) => string | undefined }) {
+const THIRD_ID = '3P-1'
+
+export function Bracket({ matches, teams, tierOf, ownerOf, finalDouble, thirdPlaceScores }: {
+  matches: Match[]; teams: Team[]
+  tierOf?: (id: string) => number | undefined; ownerOf?: (id: string) => string | undefined
+  finalDouble?: boolean; thirdPlaceScores?: boolean
+}) {
   const T = Object.fromEntries(teams.map((t) => [t.id, t]))
   const byId = Object.fromEntries(matches.map((m) => [m.id, m]))
   const live = [...LEFT, ...RIGHT].some((c) => c.ids.some((id) => byId[id]?.home_team_id || byId[id]?.away_team_id))
@@ -72,13 +78,16 @@ export function Bracket({ matches, teams, tierOf, ownerOf }: { matches: Match[];
     const w = winnerId(m)
     const aet = !!m && m.home_g90 != null && (m.home_goals !== m.home_g90 || m.away_goals !== m.away_g90)
     const pens = !!m && m.home_pens != null && m.away_pens != null
+    // Points multiplier mirrors the league options (services/scoring.ts): the Final can
+    // count double, the third-place playoff can be off (0 → no points shown at all).
+    const mult = id === FINAL_ID ? (finalDouble ? 2 : 1) : id === THIRD_ID ? (thirdPlaceScores ? 1 : 0) : 1
     let hTotal: number | null = null, aTotal: number | null = null
-    if (fin && m) {
+    if (fin && m && mult > 0) {
       const hT = m.home_team_id ? tierOf?.(m.home_team_id) : undefined
       const aT = m.away_team_id ? tierOf?.(m.away_team_id) : undefined
       const hG90 = m.home_g90 ?? m.home_goals!, aG90 = m.away_g90 ?? m.away_goals!
-      hTotal = matchPoints(m.home_goals!, m.away_goals!, hG90, hT, aT)
-      aTotal = matchPoints(m.away_goals!, m.home_goals!, aG90, aT, hT)
+      hTotal = matchPoints(m.home_goals!, m.away_goals!, hG90, hT, aT) * mult
+      aTotal = matchPoints(m.away_goals!, m.home_goals!, aG90, aT, hT) * mult
     }
     return (
       <div className={clsx('bk-match', !m?.home_team_id && !m?.away_team_id && 'tbd')}>
@@ -107,8 +116,14 @@ export function Bracket({ matches, teams, tierOf, ownerOf }: { matches: Match[];
     <div className="bracket">
       {LEFT.map((col, i) => <Column key={`L${i}`} col={col} />)}
       <div className={clsx('bk-col', 'bk-col-final', !(byId[FINAL_ID]?.home_team_id || byId[FINAL_ID]?.away_team_id) && 'narrow')}>
-        <div className="bk-col-h">Final</div>
+        <div className="bk-col-h">Final{finalDouble && <span className="bk-col-tag" title="This league scores the Final double"> ×2</span>}</div>
         <div className="bk-col-body"><BMatch id={FINAL_ID} /></div>
+        {byId[THIRD_ID] && (
+          <div className="bk-third">
+            <div className="bk-col-h">Third place{thirdPlaceScores === false && <span className="bk-col-tag" title="This league does not score the third-place playoff"> · no pts</span>}</div>
+            <BMatch id={THIRD_ID} />
+          </div>
+        )}
       </div>
       {RIGHT.map((col, i) => <Column key={`R${i}`} col={col} mir />)}
     </div>

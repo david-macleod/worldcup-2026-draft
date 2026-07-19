@@ -369,6 +369,9 @@
 .bk-col.narrow { flex: 0 0 auto; min-width: 0; }      /* rounds with no teams yet stay compact */
 .bk-col-h { font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); text-align: center; margin-bottom: 10px; }
 .bk-col-body { flex: 1; display: flex; flex-direction: column; justify-content: space-around; gap: 8px; }
+/* Third-place playoff sits under the Final in the centre column, visually separated. */
+.bk-third { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--hairline); }
+.bk-col-tag { color: var(--muted); font-weight: 700; }
 
 .bk-match { display: flex; flex-direction: column; gap: 5px; background: var(--panel-2); border: 1px solid var(--hairline); border-radius: 10px; padding: 7px; }
 .bk-match.tbd { opacity: .5; }

@@ -148,6 +148,13 @@ export function deriveBracket(teams: TeamRow[], matches: MatchRow[]): Record<str
     pairs[id] = { home, away }
     winner[id] = koWinner(id, home, away)
   }
+  // Third-place playoff — the two semi-final losers (the non-winner of each finished SF).
+  const loserOf = (id: string): string | null => {
+    const w = winner[id], p = pairs[id]
+    if (w == null || !p) return null
+    return w === p.home ? p.away : p.home
+  }
+  pairs['3P-1'] = { home: loserOf('SF-1'), away: loserOf('SF-2') }
   return pairs
 }
 

@@ -22,7 +22,9 @@ export interface TeamRow {
   hue: number | null
 }
 
-export type Stage = 'group' | 'R32' | 'R16' | 'QF' | 'SF' | 'Final'
+// '3P' is the third-place playoff (SF losers). It sits outside the win-and-advance tree,
+// so it never feeds another match and never counts toward a team's "furthest stage reached".
+export type Stage = 'group' | 'R32' | 'R16' | 'QF' | 'SF' | '3P' | 'Final'
 
 export interface MatchRow {
   id: string
@@ -54,6 +56,10 @@ export interface LeagueRow {
   created_at: string
   n_managers: number
   n_rounds: number
+  /** Scoring options (0/1). final_double: the Final awards double points; third_place_scores:
+   *  the third-place playoff awards points at all. Both default 0 (off). */
+  final_double: number
+  third_place_scores: number
 }
 
 export interface ManagerRow {

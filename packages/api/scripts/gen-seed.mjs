@@ -94,6 +94,7 @@ const KO_KICKOFFS = {
   'QF-4': '07-11 21:00',   // match 100 — Arrowhead, Kansas City
   'SF-1': '07-14 15:00',   // match 101 — AT&T, Dallas
   'SF-2': '07-15 15:00',   // match 102 — Mercedes-Benz, Atlanta
+  '3P-1': '07-18 15:00',   // match 103 — third-place playoff, Hard Rock, Miami
   'Final-1': '07-19 15:00', // match 104 — MetLife, New York/New Jersey
 }
 
@@ -149,7 +150,8 @@ lines.push('')
 
 // ---- knockout skeleton (teams assigned later by admin) ----
 lines.push('-- knockout skeleton — teams (and scores) assigned by the admin as the bracket fills')
-const KO = [['R32', 16], ['R16', 8], ['QF', 4], ['SF', 2], ['Final', 1]]
+// SF before 3P before Final so the third-place playoff sits between them chronologically.
+const KO = [['R32', 16], ['R16', 8], ['QF', 4], ['SF', 2], ['3P', 1], ['Final', 1]]
 for (const [stage, count] of KO) {
   for (let i = 1; i <= count; i++) {
     const id = `${stage}-${i}`
@@ -167,4 +169,4 @@ lines.push('')
 
 writeFileSync(resolve(here, '../src/db/seed.sql'), lines.join('\n'))
 writeFileSync(resolve(here, '../src/db/teams.json'), JSON.stringify(TEAMS, null, 0))
-console.log(`seed.sql written: ${TEAMS.length} teams, ${GROUPS.length * 6} group matches, 31 knockout slots`)
+console.log(`seed.sql written: ${TEAMS.length} teams, ${GROUPS.length * 6} group matches, 32 knockout slots`)

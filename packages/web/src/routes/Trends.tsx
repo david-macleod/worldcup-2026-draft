@@ -49,11 +49,15 @@ function buildSeries(view: LeagueView): { series: Series[]; maxRound: number } {
   }
   for (const m of view.matches) {
     if (m.stage === 'group' || !finished(m)) continue
-    const round = KO_ROUND[m.stage]
+    // mirror the league scoring options (services/scoring.ts): Final ×2, third-place off → 0.
+    // The bronze match buckets into the Final round so its points show in the last column.
+    const mult = m.stage === 'Final' ? (view.league.finalDouble ? 2 : 1) : m.stage === '3P' ? (view.league.thirdPlaceScores ? 1 : 0) : 1
+    if (mult === 0) continue
+    const round = m.stage === '3P' ? KO_ROUND.Final : KO_ROUND[m.stage]
     if (!round) continue
     for (const home of [true, false]) {
       const s = side(m, home)
-      if (s) perTeam[s.id].push({ round, pts: s.pts })
+      if (s) perTeam[s.id].push({ round, pts: s.pts * mult })
     }
   }
 
