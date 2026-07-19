@@ -48,8 +48,9 @@ export function OwnerChip({ o }: { o: OwnerInfo }) {
 
 // One group's standings table, computed from its finished matches. Top-two carry the
 // "qualifies" left accent; with `owners`, each row gains the drafter's chip.
-export function GroupTable({ gms, tmap, owners, teamWidth }: {
+export function GroupTable({ gms, tmap, owners, teamWidth, out }: {
   gms: Match[]; tmap: Record<string, Team>; owners?: Owners; teamWidth?: string
+  out?: Set<string> // teams mathematically out of the competition — fade their flags
 }) {
   const teamIds = new Set<string>()
   for (const m of gms) {
@@ -76,6 +77,7 @@ export function GroupTable({ gms, tmap, owners, teamWidth }: {
           cells: [r.p, r.w, r.d, r.l, r.gf, r.ga, r.gd > 0 ? `+${r.gd}` : r.gd],
           total: r.pts,
           meta: o ? <OwnerChip o={o} /> : undefined,
+          faded: out?.has(r.team.id),
         }
       })}
     />

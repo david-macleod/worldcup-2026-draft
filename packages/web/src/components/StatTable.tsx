@@ -14,6 +14,7 @@ export interface StatTableRow {
   cells: Array<number | string> // stat values in column order, excluding the total
   total: number | string
   meta?: ReactNode // optional second line under the team name (e.g. the owner chip)
+  faded?: boolean // team is mathematically out of the competition — fade its flag
 }
 
 export function StatTable({ columns, rows, totalLabel, teamWidth }: {
@@ -33,7 +34,7 @@ export function StatTable({ columns, rows, totalLabel, teamWidth }: {
       {rows.map((r) => (
         <div className={'bt-row' + (r.accent ? ' ' + r.accent : '')} key={r.id}>
           <span className="bt-team">
-            <Flag code={r.code} name={r.name} />
+            <Flag code={r.code} name={r.name} faded={r.faded} />
             <span className="bt-team-txt">
               <b className="bt-name">{r.name}</b>
               {r.meta}

@@ -5,6 +5,7 @@ import { apiFetch, type FixturesView, type Match, type Team } from '../lib/api'
 import { Flag, teamMap } from '../components/ui'
 import { GroupTable } from '../components/GroupTable'
 import { Bracket } from '../components/Bracket'
+import { eliminatedTeams } from '../lib/elimination'
 
 const KO_STAGES = ['R32', 'R16', 'QF', 'SF', 'Final'] as const
 // Local kickoff time, with single-digit AM hours zero-padded (9:00 AM -> 09:00 AM;
@@ -109,6 +110,7 @@ export function Fixtures() {
   if (q.isError) return <div className="wrap"><p className="err">{(q.error as Error).message}</p></div>
   const { teams, matches } = q.data!
   const tmap = teamMap(teams)
+  const out = eliminatedTeams({ teams, matches })
 
   const groupMatches = matches.filter((m) => m.stage === 'group')
   const groups = [...new Set(groupMatches.map((m) => m.grp).filter(Boolean) as string[])].sort()
@@ -136,7 +138,7 @@ export function Fixtures() {
           {groups.map((g) => (
             <div className="panel group-panel" key={g}>
               <h2>Group {g}</h2>
-              <GroupTable gms={groupMatches.filter((m) => m.grp === g)} tmap={tmap} />
+              <GroupTable gms={groupMatches.filter((m) => m.grp === g)} tmap={tmap} out={out} />
             </div>
           ))}
         </div>
