@@ -37,6 +37,7 @@
   color: #ff6b6b; background: rgba(255,107,107,.12); padding: 6px 12px; border-radius: 20px; letter-spacing: .05em; }
 .results .hero-live::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #ff6b6b; animation: blink 1.3s infinite; }
 @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+.results .hero-links { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 6px; }
 .results .hero-link { font-family: var(--mono); font-size: 12px; color: var(--muted); text-decoration: none; border-bottom: 1px dotted var(--muted); }
 .results a.hero-globe { text-decoration: none; cursor: pointer; transition: transform .12s; }
 .results a.hero-globe:hover { transform: scale(1.12); }
@@ -372,6 +373,23 @@
 /* Third-place playoff sits under the Final in the centre column, visually separated. */
 .bk-third { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--hairline); }
 .bk-col-tag { color: var(--muted); font-weight: 700; }
+
+/* ── Country rankings — one nation per row, tier-coloured bar sized vs the top scorer ── */
+.results .cr-list { display: flex; flex-direction: column; gap: 6px; }
+.results .cr-row { display: grid; grid-template-columns: 26px var(--flag-w, 26px) minmax(90px, 1fr) minmax(0, 3fr) 46px; align-items: center; gap: 10px; }
+.results .cr-rank { font-family: var(--mono); font-size: 13px; color: var(--muted); text-align: right; }
+.results .cr-flag .flag { width: var(--flag-w, 26px); height: auto; border-radius: 3px; }
+.results .cr-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.results .cr-owner { color: var(--muted); font-weight: 400; font-size: 12px; }
+.results .cr-track { min-width: 0; background: var(--panel-2); border-radius: 6px; overflow: hidden; }
+.results .cr-bar { height: 20px; min-width: 3px; border-radius: 6px; transition: width .6s cubic-bezier(.4,0,.2,1); }
+.results .cr-bar.t1 { background: var(--t1); } .results .cr-bar.t2 { background: var(--t2); } .results .cr-bar.t3 { background: var(--t3); }
+.results .cr-pts { font-family: var(--mono); font-weight: 700; font-size: 14px; text-align: right; font-variant-numeric: tabular-nums; }
+.results .cr-pts.zero { color: var(--muted); }
+.results .cr-legend { display: flex; gap: 16px; margin-top: 14px; }
+.results .cr-key { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.results .cr-swatch { width: 11px; height: 11px; border-radius: 3px; }
+.results .cr-key.t1 .cr-swatch { background: var(--t1); } .results .cr-key.t2 .cr-swatch { background: var(--t2); } .results .cr-key.t3 .cr-swatch { background: var(--t3); }
 
 .bk-match { display: flex; flex-direction: column; gap: 5px; background: var(--panel-2); border: 1px solid var(--hairline); border-radius: 10px; padding: 7px; }
 .bk-match.tbd { opacity: .5; }

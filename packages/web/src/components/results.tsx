@@ -627,7 +627,10 @@ export function ResultsView({ view, homeHref, highlight }: { view: LeagueView; h
         <div className="hero-txt">
           <div className="hero-kick">Competition standings</div>
           <h1 className="hero-h1">{view.league.name}</h1>
-          <Link to="/l/$leagueId/trends" params={{ leagueId: view.league.id }} className="hero-link">📈 Form guide — points per round</Link>
+          <div className="hero-links">
+            <Link to="/l/$leagueId/trends" params={{ leagueId: view.league.id }} className="hero-link">📈 Form guide — points per round</Link>
+            <Link to="/l/$leagueId/countries" params={{ leagueId: view.league.id }} className="hero-link">🌐 Country rankings — points by nation</Link>
+          </div>
         </div>
         {homeHref}
       </div>
